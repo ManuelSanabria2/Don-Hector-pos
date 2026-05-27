@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Don Héctor Licorera — Logo v2 Ámbar</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400;1,600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --negro:      #0A0A08;
+    --superficie: #131310;
+    --borde:      #252520;
+    --ambar:      #C8920A;
+    --ambar-cl:   #E0A820;
+    --ambar-os:   #8A6200;
+    --verde:      #4A7A28;
+    --blanco:     #F0EBE0;
+    --blanco-dim: #8A8478;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--negro);
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 64px 32px;
+    min-height: 100vh;
+    gap: 0;
+  }
+
+  /* ── Título de sección ── */
+  .sec-label {
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ambar);
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 680px;
+  }
+  .sec-label::before,
+  .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--borde); }
+
+  /* ── Logo container ── */
+  .logo-wrap {
+    width: 100%;
+    max-width: 680px;
+    margin-bottom: 2px;
+  }
+
+  .logo-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* ── Variantes en fila ── */
+  .variants {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    width: 100%;
+    max-width: 680px;
+    margin-top: 1px;
+    background: var(--borde);
+    margin-bottom: 64px;
+  }
+
+  .variant-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 20px;
+    gap: 16px;
+  }
+  .vc-dark  { background: var(--negro); }
+  .vc-ambar { background: var(--ambar); }
+  .vc-light { background: var(--blanco); }
+
+  .variant-cell svg { width: 100%; height: auto; max-width: 180px; }
+
+  .vc-tag {
+    font-size: 8px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .vc-dark  .vc-tag { color: var(--blanco-dim); }
+  .vc-ambar .vc-tag { color: rgba(10,8,0,0.45); }
+  .vc-light .vc-tag { color: #8A8478; }
+
+  /* ── Isotipo / ícono solo ── */
+  .isotipo-row {
+    display: flex;
+    gap: 28px;
+    align-items: flex-end;
+    margin-bottom: 64px;
+    width: 100%;
+    max-width: 680px;
+  }
+
+  .iso-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .iso-box {
+    background: var(--negro);
+    border: 1px solid var(--borde);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .iso-xl { width: 120px; height: 120px; border-radius: 28px; }
+  .iso-lg { width: 80px;  height: 80px;  border-radius: 18px; }
+  .iso-md { width: 52px;  height: 52px;  border-radius: 12px; }
+  .iso-sm { width: 36px;  height: 36px;  border-radius: 8px; }
+
+  .iso-box svg { width: 58%; height: 58%; }
+
+  .iso-tag {
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--blanco-dim);
+  }
+
+  /* ── Folio ── */
+  .folio {
+    width: 100%;
+    max-width: 680px;
+    border-top: 1px solid var(--borde);
+    padding-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 32px;
+  }
+  .folio-brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--ambar);
+  }
+  .folio-meta {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--blanco-dim);
+    text-align: right;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     LOGO PRINCIPAL
+══════════════════════════════════ -->
+<div class="sec-label">Logo principal</div>
+
+<div class="logo-wrap">
+  <svg class="logo-svg" viewBox="0 0 680 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400;1,600&amp;family=DM+Mono:wght@300;400;500&amp;display=swap');
+        .f-cormorant { font-family: 'Cormorant Garamond', Georgia, serif; }
+        .f-mono      { font-family: 'DM Mono', 'Courier New', monospace; }
+      </style>
+    </defs>
+
+    <!-- Fondo -->
+    <rect width="680" height="400" fill="#0A0A08"/>
+
+    <!-- Marco exterior ámbar -->
+    <rect x="2" y="2" width="676" height="396" fill="none" stroke="#C8920A" stroke-width="1"/>
+
+    <!-- Marcas de esquina decorativas -->
+    <!-- TL -->
+    <line x1="2"   y1="52"  x2="36"  y2="52"  stroke="#C8920A" stroke-width="0.5"/>
+    <line x1="52"  y1="2"   x2="52"  y2="36"  stroke="#C8920A" stroke-width="0.5"/>
+    <!-- TR -->
+    <line x1="678" y1="52"  x2="644" y2="52"  stroke="#C8920A" stroke-width="0.5"/>
+    <line x1="628" y1="2"   x2="628" y2="36"  stroke="#C8920A" stroke-width="0.5"/>
+    <!-- BL -->
+    <line x1="2"   y1="348" x2="36"  y2="348" stroke="#C8920A" stroke-width="0.5"/>
+    <line x1="52"  y1="398" x2="52"  y2="364" stroke="#C8920A" stroke-width="0.5"/>
+    <!-- BR -->
+    <line x1="678" y1="348" x2="644" y2="348" stroke="#C8920A" stroke-width="0.5"/>
+    <line x1="628" y1="398" x2="628" y2="364" stroke="#C8920A" stroke-width="0.5"/>
+
+    <!-- ── "24h" — top left ── -->
+    <text x="68" y="38"
+          class="f-mono"
+          font-size="15"
+          font-weight="400"
+          fill="#C8920A"
+          letter-spacing="3">24h</text>
+
+    <!-- ── Luna creciente — top right ── -->
+    <!-- Círculo base (más grande) -->
+    <circle cx="592" cy="38" r="18" fill="#4A7A28"/>
+    <!-- Círculo recorte (desplazado para formar creciente) -->
+    <circle cx="585" cy="33" r="15" fill="#0A0A08"/>
+
+    <!-- ── BOTELLA — centrada, zona superior ── -->
+    <!-- Tapón -->
+    <rect x="328" y="22" width="24" height="10" rx="1.5"
+          fill="#F0EBE0" opacity="0.2"/>
+    <!-- Cuello -->
+    <rect x="323" y="31" width="34" height="10" rx="1"
+          fill="#F0EBE0" opacity="0.18"/>
+    <!-- Hombros -->
+    <path d="M316 44 Q312 58 311 74 L311 138 Q311 140 313 140 L367 140 Q369 140 369 138 L369 74 Q368 58 364 44 Z"
+          fill="#F0EBE0" opacity="0.05"/>
+    <!-- Contorno botella -->
+    <path d="M316 44 Q312 58 311 74 L311 138 Q311 140 313 140 L367 140 Q369 140 369 138 L369 74 Q368 58 364 44 Z"
+          fill="none" stroke="#F0EBE0" stroke-width="0.8" opacity="0.35"/>
+    <!-- Líquido ámbar -->
+    <path d="M311 110 L369 110 L369 138 Q369 140 367 140 L313 140 Q311 140 311 138 Z"
+          fill="#C8920A" opacity="0.45"/>
+    <!-- Reflejo botella -->
+    <line x1="319" y1="52" x2="319" y2="130"
+          stroke="#F0EBE0" stroke-width="0.5" opacity="0.12"/>
+    <!-- Etiqueta botella -->
+    <rect x="318" y="82" width="44" height="26" rx="1"
+          fill="none" stroke="#F0EBE0" stroke-width="0.4" opacity="0.2"/>
+
+    <!-- Línea divisoria — zona media -->
+    <line x1="44" y1="158" x2="636" y2="158"
+          stroke="#252520" stroke-width="0.5"/>
+
+    <!-- ── "DON" — encima del nombre ── -->
+    <text x="340" y="196"
+          class="f-mono"
+          font-size="13"
+          font-weight="300"
+          fill="#8A8478"
+          letter-spacing="12"
+          text-anchor="middle">DON</text>
+
+    <!-- ── "Héctor" — nombre principal ── -->
+    <text x="340" y="302"
+          class="f-cormorant"
+          font-size="110"
+          font-style="italic"
+          font-weight="300"
+          fill="#F0EBE0"
+          letter-spacing="-1"
+          text-anchor="middle">Héctor</text>
+
+    <!-- ── Línea separadora inferior ── -->
+    <line x1="44" y1="322" x2="636" y2="322"
+          stroke="#C8920A" stroke-width="0.5" opacity="0.4"/>
+
+    <!-- ── "Licorera" — subtítulo ── -->
+    <text x="340" y="370"
+          class="f-cormorant"
+          font-size="42"
+          font-style="italic"
+          font-weight="300"
+          fill="#C8920A"
+          letter-spacing="2"
+          text-anchor="middle">Licorera</text>
+
+    <!-- Punto decorativo — separadores de "Licorera" -->
+    <circle cx="168" cy="358" r="1.5" fill="#C8920A" opacity="0.5"/>
+    <circle cx="512" cy="358" r="1.5" fill="#C8920A" opacity="0.5"/>
+  </svg>
+</div>
+
+
+<!-- ══════════════════════════════════
+     VARIANTES
+══════════════════════════════════ -->
+<div class="variants">
+
+  <!-- Oscura -->
+  <div class="variant-cell vc-dark">
+    <svg viewBox="0 0 280 170" xmlns="http://www.w3.org/2000/svg">
+      <rect width="280" height="170" fill="#0A0A08"/>
+      <rect x="1.5" y="1.5" width="277" height="167" fill="none" stroke="#C8920A" stroke-width="0.8"/>
+      <!-- corners -->
+      <line x1="1.5" y1="22" x2="16" y2="22" stroke="#C8920A" stroke-width="0.4"/>
+      <line x1="22"  y1="1.5" x2="22" y2="16" stroke="#C8920A" stroke-width="0.4"/>
+      <line x1="278.5" y1="22" x2="264" y2="22" stroke="#C8920A" stroke-width="0.4"/>
+      <line x1="258"   y1="1.5" x2="258" y2="16" stroke="#C8920A" stroke-width="0.4"/>
+      <!-- luna -->
+      <circle cx="248" cy="20" r="9" fill="#4A7A28"/>
+      <circle cx="244" cy="17" r="7.5" fill="#0A0A08"/>
+      <!-- botella mini -->
+      <rect x="134" y="8" width="12" height="5" rx="1" fill="#F0EBE0" opacity="0.18"/>
+      <path d="M128 18 Q126 26 126 34 L126 62 Q126 63 127 63 L153 63 Q154 63 154 62 L154 34 Q154 26 152 18 Z"
+            fill="none" stroke="#F0EBE0" stroke-width="0.6" opacity="0.3"/>
+      <path d="M126 52 L154 52 L154 62 Q154 63 153 63 L127 63 Q126 63 126 62 Z"
+            fill="#C8920A" opacity="0.4"/>
+      <!-- texto -->
+      <text x="140" y="84" font-family="'DM Mono','Courier New',monospace" font-size="6" fill="#8A8478" letter-spacing="5" text-anchor="middle">DON</text>
+      <text x="140" y="128" font-family="'Cormorant Garamond',Georgia,serif" font-size="46" font-style="italic" font-weight="300" fill="#F0EBE0" text-anchor="middle">Héctor</text>
+      <line x1="18" y1="138" x2="262" y2="138" stroke="#C8920A" stroke-width="0.4" opacity="0.4"/>
+      <text x="140" y="158" font-family="'Cormorant Garamond',Georgia,serif" font-size="18" font-style="italic" font-weight="300" fill="#C8920A" text-anchor="middle">Licorera</text>
+    </svg>
+    <span class="vc-tag">Principal</span>
+  </div>
+
+  <!-- Sobre ámbar -->
+  <div class="variant-cell vc-ambar">
+    <svg viewBox="0 0 280 170" xmlns="http://www.w3.org/2000/svg">
+      <rect width="280" height="170" fill="#C8920A"/>
+      <rect x="1.5" y="1.5" width="277" height="167" fill="none" stroke="rgba(10,8,0,0.3)" stroke-width="0.8"/>
+      <line x1="1.5" y1="22" x2="16" y2="22" stroke="rgba(10,8,0,0.25)" stroke-width="0.4"/>
+      <line x1="22"  y1="1.5" x2="22" y2="16" stroke="rgba(10,8,0,0.25)" stroke-width="0.4"/>
+      <line x1="278.5" y1="22" x2="264" y2="22" stroke="rgba(10,8,0,0.25)" stroke-width="0.4"/>
+      <line x1="258"   y1="1.5" x2="258" y2="16" stroke="rgba(10,8,0,0.25)" stroke-width="0.4"/>
+      <circle cx="248" cy="20" r="9" fill="#4A7A28"/>
+      <circle cx="244" cy="17" r="7.5" fill="#C8920A"/>
+      <rect x="134" y="8" width="12" height="5" rx="1" fill="rgba(10,8,0,0.2)"/>
+      <path d="M128 18 Q126 26 126 34 L126 62 Q126 63 127 63 L153 63 Q154 63 154 62 L154 34 Q154 26 152 18 Z"
+            fill="none" stroke="rgba(10,8,0,0.3)" stroke-width="0.6"/>
+      <path d="M126 52 L154 52 L154 62 Q154 63 153 63 L127 63 Q126 63 126 62 Z"
+            fill="rgba(10,8,0,0.18)"/>
+      <text x="140" y="84" font-family="'DM Mono','Courier New',monospace" font-size="6" fill="rgba(10,8,0,0.45)" letter-spacing="5" text-anchor="middle">DON</text>
+      <text x="140" y="128" font-family="'Cormorant Garamond',Georgia,serif" font-size="46" font-style="italic" font-weight="300" fill="#0A0800" text-anchor="middle">Héctor</text>
+      <line x1="18" y1="138" x2="262" y2="138" stroke="rgba(10,8,0,0.2)" stroke-width="0.4"/>
+      <text x="140" y="158" font-family="'Cormorant Garamond',Georgia,serif" font-size="18" font-style="italic" font-weight="300" fill="rgba(10,8,0,0.6)" text-anchor="middle">Licorera</text>
+    </svg>
+    <span class="vc-tag">Ámbar</span>
+  </div>
+
+  <!-- Sobre claro -->
+  <div class="variant-cell vc-light">
+    <svg viewBox="0 0 280 170" xmlns="http://www.w3.org/2000/svg">
+      <rect width="280" height="170" fill="#F0EBE0"/>
+      <rect x="1.5" y="1.5" width="277" height="167" fill="none" stroke="#8A6200" stroke-width="0.8"/>
+      <line x1="1.5" y1="22" x2="16" y2="22" stroke="#8A6200" stroke-width="0.4"/>
+      <line x1="22"  y1="1.5" x2="22" y2="16" stroke="#8A6200" stroke-width="0.4"/>
+      <line x1="278.5" y1="22" x2="264" y2="22" stroke="#8A6200" stroke-width="0.4"/>
+      <line x1="258"   y1="1.5" x2="258" y2="16" stroke="#8A6200" stroke-width="0.4"/>
+      <circle cx="248" cy="20" r="9" fill="#4A7A28"/>
+      <circle cx="244" cy="17" r="7.5" fill="#F0EBE0"/>
+      <rect x="134" y="8" width="12" height="5" rx="1" fill="#0A0800" opacity="0.15"/>
+      <path d="M128 18 Q126 26 126 34 L126 62 Q126 63 127 63 L153 63 Q154 63 154 62 L154 34 Q154 26 152 18 Z"
+            fill="none" stroke="#0A0800" stroke-width="0.6" opacity="0.25"/>
+      <path d="M126 52 L154 52 L154 62 Q154 63 153 63 L127 63 Q126 63 126 62 Z"
+            fill="#C8920A" opacity="0.5"/>
+      <text x="140" y="84" font-family="'DM Mono','Courier New',monospace" font-size="6" fill="#8A8478" letter-spacing="5" text-anchor="middle">DON</text>
+      <text x="140" y="128" font-family="'Cormorant Garamond',Georgia,serif" font-size="46" font-style="italic" font-weight="300" fill="#0A0800" text-anchor="middle">Héctor</text>
+      <line x1="18" y1="138" x2="262" y2="138" stroke="#8A6200" stroke-width="0.4" opacity="0.35"/>
+      <text x="140" y="158" font-family="'Cormorant Garamond',Georgia,serif" font-size="18" font-style="italic" font-weight="300" fill="#8A6200" text-anchor="middle">Licorera</text>
+    </svg>
+    <span class="vc-tag">Claro</span>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════
+     ISOTIPO / APP ICONS
+══════════════════════════════════ -->
+<div class="sec-label">Isotipo — ícono de aplicación</div>
+
+<div class="isotipo-row">
+
+  <div class="iso-wrap">
+    <div class="iso-box iso-xl">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="98" height="98" rx="22" fill="#0A0A08"/>
+        <!-- Botella -->
+        <rect x="44" y="8"  width="12" height="7"  rx="1.5" fill="#F0EBE0" opacity="0.2"/>
+        <rect x="42" y="14" width="16" height="6"  rx="1"   fill="#F0EBE0" opacity="0.18"/>
+        <path d="M36 24 Q33 34 33 44 L33 76 Q33 78 35 78 L65 78 Q67 78 67 76 L67 44 Q67 34 64 24 Z"
+              fill="none" stroke="#F0EBE0" stroke-width="0.9" opacity="0.3"/>
+        <path d="M33 62 L67 62 L67 76 Q67 78 65 78 L35 78 Q33 78 33 76 Z"
+              fill="#C8920A" opacity="0.55"/>
+        <line x1="40" y1="30" x2="40" y2="70" stroke="#F0EBE0" stroke-width="0.5" opacity="0.1"/>
+        <!-- Etiqueta -->
+        <rect x="40" y="42" width="20" height="14" rx="0.5" fill="none" stroke="#F0EBE0" stroke-width="0.4" opacity="0.2"/>
+        <!-- Luna — top right -->
+        <circle cx="74" cy="20" r="12" fill="#4A7A28"/>
+        <circle cx="69" cy="16" r="10" fill="#0A0A08"/>
+        <!-- Marco isotipo -->
+        <rect x="1" y="1" width="98" height="98" rx="22" fill="none" stroke="#C8920A" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <span class="iso-tag">512 px</span>
+  </div>
+
+  <div class="iso-wrap">
+    <div class="iso-box iso-lg">
+      <svg viewBox="0 0 100 100" fill="none">
+        <rect x="1" y="1" width="98" height="98" rx="18" fill="#0A0A08"/>
+        <rect x="44" y="9"  width="12" height="7" rx="1.5" fill="#F0EBE0" opacity="0.2"/>
+        <rect x="42" y="15" width="16" height="5" rx="1"   fill="#F0EBE0" opacity="0.18"/>
+        <path d="M36 24 Q33 34 33 44 L33 76 Q33 78 35 78 L65 78 Q67 78 67 76 L67 44 Q67 34 64 24 Z"
+              fill="none" stroke="#F0EBE0" stroke-width="1" opacity="0.3"/>
+        <path d="M33 62 L67 62 L67 76 Q67 78 65 78 L35 78 Q33 78 33 76 Z" fill="#C8920A" opacity="0.55"/>
+        <circle cx="74" cy="20" r="12" fill="#4A7A28"/>
+        <circle cx="69" cy="16" r="10" fill="#0A0A08"/>
+        <rect x="1" y="1" width="98" height="98" rx="18" fill="none" stroke="#C8920A" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <span class="iso-tag">192 px</span>
+  </div>
+
+  <div class="iso-wrap">
+    <div class="iso-box iso-md">
+      <svg viewBox="0 0 100 100" fill="none">
+        <rect x="1" y="1" width="98" height="98" rx="12" fill="#0A0A08"/>
+        <path d="M36 24 Q33 34 33 44 L33 76 Q33 78 35 78 L65 78 Q67 78 67 76 L67 44 Q67 34 64 24 Z"
+              fill="none" stroke="#F0EBE0" stroke-width="1.2" opacity="0.35"/>
+        <path d="M33 62 L67 62 L67 76 Q67 78 65 78 L35 78 Q33 78 33 76 Z" fill="#C8920A" opacity="0.6"/>
+        <circle cx="74" cy="20" r="12" fill="#4A7A28"/>
+        <circle cx="69" cy="16" r="10" fill="#0A0A08"/>
+        <rect x="1" y="1" width="98" height="98" rx="12" fill="none" stroke="#C8920A" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <span class="iso-tag">48 px</span>
+  </div>
+
+  <div class="iso-wrap">
+    <div class="iso-box iso-sm">
+      <svg viewBox="0 0 100 100" fill="none">
+        <rect x="1" y="1" width="98" height="98" rx="8" fill="#0A0A08"/>
+        <!-- Simplificado: botella rect + luna -->
+        <rect x="34" y="20" width="32" height="58" rx="3" fill="none" stroke="#F0EBE0" stroke-width="1.5" opacity="0.35"/>
+        <rect x="34" y="60" width="32" height="18" rx="2" fill="#C8920A" opacity="0.6"/>
+        <circle cx="74" cy="22" r="11" fill="#4A7A28"/>
+        <circle cx="70" cy="18" r="9"  fill="#0A0A08"/>
+        <rect x="1" y="1" width="98" height="98" rx="8" fill="none" stroke="#C8920A" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <span class="iso-tag">32 px</span>
+  </div>
+
+  <!-- Solo luna + botella horizontal -->
+  <div class="iso-wrap" style="margin-left: auto;">
+    <div style="background: var(--negro); border: 1px solid var(--borde); padding: 16px 24px; display: flex; align-items: center; gap: 16px;">
+      <svg width="32" height="40" viewBox="0 0 100 120" fill="none">
+        <path d="M32 26 Q28 40 28 56 L28 100 Q28 102 30 102 L70 102 Q72 102 72 100 L72 56 Q72 40 68 26 Z"
+              fill="none" stroke="#F0EBE0" stroke-width="1.5" opacity="0.4"/>
+        <path d="M28 78 L72 78 L72 100 Q72 102 70 102 L30 102 Q28 102 28 100 Z"
+              fill="#C8920A" opacity="0.55"/>
+        <rect x="40" y="8" width="20" height="10" rx="2" fill="#F0EBE0" opacity="0.18"/>
+        <rect x="36" y="17" width="28" height="7"  rx="1" fill="#F0EBE0" opacity="0.15"/>
+      </svg>
+      <div>
+        <div style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.22em; color:#8A8478; text-transform:uppercase; margin-bottom:4px;">Don</div>
+        <div style="font-family:'Cormorant Garamond',Georgia,serif; font-style:italic; font-size:28px; font-weight:300; color:#F0EBE0; line-height:1;">Héctor</div>
+        <div style="font-family:'DM Mono',monospace; font-size:8px; letter-spacing:0.2em; color:#8A8478; text-transform:uppercase; margin-top:3px;">Licorera</div>
+      </div>
+    </div>
+    <span class="iso-tag" style="margin-top:10px;">Horizontal</span>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════
+     PIE
+══════════════════════════════════ -->
+<div class="folio">
+  <span class="folio-brand">Don Héctor Licorera</span>
+  <div class="folio-meta">
+    Logo v2.0 — Sistema Ámbar<br>
+    2026
+  </div>
+</div>
+
+</body>
+</html>

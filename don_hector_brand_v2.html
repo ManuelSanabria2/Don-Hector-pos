@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Don Héctor Licorera — Sistema de Marca v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --negro:       #0A0A08;
+    --superficie:  #131310;
+    --superficie2: #1A1A16;
+    --borde:       #252520;
+    --borde-md:    #333330;
+
+    --ambar:       #C8920A;
+    --ambar-cl:    #E0A820;
+    --ambar-os:    #8A6200;
+    --ambar-glow:  rgba(200,146,10,0.12);
+
+    --verde:       #4A7A28;
+    --rojo:        #9B2020;
+
+    --blanco:      #F0EBE0;
+    --blanco-dim:  #8A8478;
+    --crema:       #2A2820;
+    --gris:        #3A3A34;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--negro);
+    color: var(--blanco);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+
+  .page { max-width: 920px; margin: 0 auto; padding: 80px 40px; }
+  section { margin-bottom: 100px; }
+
+  .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ambar);
+    margin-bottom: 36px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .label::after { content: ''; flex: 1; height: 1px; background: var(--borde); }
+
+  /* ─── HERO ─── */
+  .hero {
+    border: 1px solid var(--borde-md);
+    min-height: 360px;
+    padding: 56px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    margin-bottom: 100px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    bottom: -60px; right: -60px;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(200,146,10,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-sup {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ambar);
+    display: block;
+    margin-bottom: 28px;
+  }
+
+  .hero-wm {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    line-height: 0.88;
+  }
+  .hero-wm .don {
+    display: block;
+    font-size: clamp(40px, 6vw, 68px);
+    letter-spacing: 0.06em;
+    color: var(--blanco-dim);
+  }
+  .hero-wm .hector {
+    display: block;
+    font-size: clamp(64px, 10vw, 110px);
+    font-style: italic;
+    color: var(--blanco);
+    letter-spacing: -0.01em;
+  }
+
+  .hero-sub {
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--blanco-dim);
+    margin-top: 14px;
+  }
+
+  .hero-side {
+    text-align: right;
+    padding-left: 40px;
+    border-left: 1px solid var(--borde);
+    align-self: end;
+  }
+  .hero-year {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--blanco-dim);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .hero-24h {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 48px;
+    font-weight: 300;
+    color: var(--ambar);
+    line-height: 1;
+    display: block;
+  }
+
+  /* ─── LOGO GRID ─── */
+  .logo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--borde); }
+
+  .logo-cell {
+    padding: 40px 36px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+  }
+  .lc-dark  { background: var(--negro); }
+  .lc-ambar { background: var(--ambar); }
+  .lc-light { background: #F0EBE0; }
+
+  .lm { font-family: 'Cormorant Garamond', serif; font-weight: 300; line-height: 0.9; }
+  .lm-don    { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; display: block; }
+  .lm-hector { font-size: 44px; font-style: italic; display: block; }
+
+  .lc-dark .lm-don    { color: var(--ambar); }
+  .lc-dark .lm-hector { color: var(--blanco); }
+  .lc-ambar .lm-don   { color: rgba(10,8,0,0.55); }
+  .lc-ambar .lm-hector{ color: #0A0800; }
+  .lc-light .lm-don   { color: #8A6200; }
+  .lc-light .lm-hector{ color: #0A0800; }
+
+  .cell-tag {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .lc-dark  .cell-tag { color: var(--blanco-dim); }
+  .lc-ambar .cell-tag { color: rgba(10,8,0,0.45); }
+  .lc-light .cell-tag { color: #8A8478; }
+
+  /* ─── ÍCONO ─── */
+  .icon-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--borde); margin-top: 1px; }
+  .icon-cell {
+    background: var(--superficie);
+    display: flex; align-items: center; justify-content: center;
+    padding: 44px;
+  }
+  .icon-cell.inv { background: #F0EBE0; }
+
+  /* ─── APP ICONS ─── */
+  .app-row { display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; margin-top: 40px; }
+  .app-wrap { display: flex; flex-direction: column; align-items: center; }
+  .app-icon {
+    background: var(--negro);
+    border: 1px solid var(--borde-md);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ai-xl { width: 120px; height: 120px; border-radius: 28px; }
+  .ai-lg { width: 80px;  height: 80px;  border-radius: 18px; }
+  .ai-md { width: 48px;  height: 48px;  border-radius: 11px; }
+  .ai-sm { width: 32px;  height: 32px;  border-radius: 7px; }
+  .app-icon svg { width: 54%; height: 54%; }
+  .app-tag { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--blanco-dim); margin-top: 8px; }
+
+  /* ─── PALETA ─── */
+  .pal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--borde); }
+  .swatch { aspect-ratio: 0.85; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; }
+  .sw-name { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1.4; }
+  .sw-hex  { font-size: 8px; letter-spacing: 0.06em; margin-top: 2px; }
+
+  .prop-row {
+    display: flex; gap: 0; margin-top: 1px; background: var(--borde);
+  }
+  .prop-item {
+    flex: 1; background: var(--negro); padding: 20px 28px;
+    border-right: 1px solid var(--borde);
+  }
+  .prop-item:last-child { border-right: none; }
+  .prop-pct {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 40px; font-weight: 300; line-height: 1;
+    display: block; margin-bottom: 4px;
+  }
+  .prop-name { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; display: block; }
+
+  /* ─── TIPOGRAFÍA ─── */
+  .type-block { margin-bottom: 44px; border-bottom: 1px solid var(--borde); padding-bottom: 44px; }
+  .type-block:last-child { border-bottom: none; padding-bottom: 0; }
+  .type-disp { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: 72px; line-height: 0.9; color: var(--blanco); }
+  .type-disp-i { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 300; font-size: 72px; line-height: 0.9; color: var(--ambar); }
+  .type-h2 { font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: 34px; color: var(--blanco); }
+  .type-data { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 400; color: var(--blanco); }
+  .type-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--blanco-dim); }
+  .type-ambar { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ambar); font-weight: 500; }
+  .type-meta { font-size: 10px; color: var(--blanco-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 8px; display: block; }
+
+  /* ─── UI COMPONENTS ─── */
+  .ui-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--borde); }
+  .ui-panel { background: var(--negro); padding: 32px; }
+  .ui-panel.surf { background: var(--superficie); }
+
+  /* Lista de productos */
+  .prod-row {
+    border-bottom: 1px solid var(--borde);
+    padding: 18px 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .prod-row:first-child { padding-top: 0; }
+  .prod-row:last-child  { border-bottom: none; padding-bottom: 0; }
+  .pnm { font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 400; color: var(--blanco); display: block; }
+  .pct { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--blanco-dim); margin-top: 3px; display: block; }
+  .ppr { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--blanco); display: block; text-align: right; }
+  .pst { font-size: 9px; letter-spacing: 0.1em; margin-top: 4px; text-align: right; display: block; }
+  .pst.ok  { color: var(--verde); }
+  .pst.low { color: var(--ambar); }
+  .pst.out { color: var(--rojo); }
+
+  /* Login */
+  .login-box {
+    border: 1px solid var(--borde-md);
+    padding: 40px;
+    background: var(--superficie2);
+    max-width: 320px;
+  }
+  .login-logo { margin-bottom: 36px; }
+  .field { margin-bottom: 20px; }
+  .field-lbl { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--blanco-dim); display: block; margin-bottom: 8px; }
+  .field-inp {
+    width: 100%; background: transparent; border: none;
+    border-bottom: 1px solid var(--borde-md);
+    padding: 8px 0; font-family: 'DM Mono', monospace;
+    font-size: 13px; color: var(--blanco); outline: none;
+  }
+  .field-inp::placeholder { color: var(--gris); }
+
+  /* Botones */
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+  .btn {
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 400;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 12px 28px; border: none; cursor: pointer; display: inline-block;
+  }
+  .btn-pr  { background: var(--ambar); color: #0A0800; }
+  .btn-ol  { background: transparent; border: 1px solid var(--borde-md); color: var(--blanco); }
+  .btn-gh  { background: transparent; color: var(--blanco-dim); padding-left: 0; }
+
+  /* Badges */
+  .badge { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; padding: 3px 10px; }
+  .badge-am { border: 1px solid var(--ambar); color: var(--ambar); }
+  .badge-vd { border: 1px solid var(--verde); color: var(--verde); }
+  .badge-nt { border: 1px solid var(--borde-md); color: var(--blanco-dim); }
+  .badge-rd { border: 1px solid var(--rojo); color: var(--rojo); }
+
+  /* Stats */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--borde); }
+  .stat-card { background: var(--superficie); padding: 20px 24px; }
+  .stat-lbl { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--blanco-dim); display: block; margin-bottom: 10px; }
+  .stat-val { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 300; color: var(--blanco); display: block; line-height: 1; }
+  .delta { font-size: 10px; letter-spacing: 0.1em; margin-top: 6px; display: block; }
+  .d-up   { color: var(--verde); }
+  .d-warn { color: var(--ambar); }
+  .d-dn   { color: var(--rojo); }
+
+  /* Gráfica */
+  .chart-wrap { background: var(--superficie); border: 1px solid var(--borde); border-top: none; padding: 20px 24px 16px; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 5px; height: 72px; }
+  .bar { flex: 1; }
+  .bar-n { background: var(--gris); }
+  .bar-a { background: var(--ambar); }
+  .bar-t { background: var(--ambar-cl); }
+  .bar-labels { display: flex; justify-content: space-between; margin-top: 7px; }
+  .bl { font-size: 8px; letter-spacing: 0.12em; color: var(--blanco-dim); }
+  .bl.a { color: var(--ambar); }
+  .bl.t { color: var(--ambar-cl); }
+
+  /* POS panel */
+  .pos-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--borde);
+  }
+  .pos-item:last-child { border-bottom: none; }
+  .pos-nm { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: var(--blanco); }
+  .pos-qty { font-size: 10px; letter-spacing: 0.1em; color: var(--blanco-dim); display: block; margin-top: 2px; }
+  .pos-sub { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--blanco); }
+
+  .pos-total {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-top: 1px solid var(--borde-md); margin-top: 16px; padding-top: 16px;
+  }
+  .total-lbl { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--blanco-dim); }
+  .total-val { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; color: var(--ambar); }
+
+  /* USO */
+  .use-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--borde); }
+  .use-panel { background: var(--negro); padding: 28px 32px; }
+  .use-tag { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .use-tag::before { content: ''; width: 20px; height: 1px; }
+  .use-ok .use-tag { color: var(--verde); }
+  .use-ok .use-tag::before { background: var(--verde); }
+  .use-no .use-tag { color: var(--rojo); }
+  .use-no .use-tag::before { background: var(--rojo); }
+  .use-item { font-size: 11px; color: var(--blanco-dim); margin-bottom: 10px; padding-left: 14px; border-left: 1px solid var(--borde); line-height: 1.55; }
+
+  /* PIE */
+  .folio { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--borde); padding-top: 32px; margin-top: 100px; }
+  .folio-lft { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 22px; color: var(--ambar); }
+  .folio-rt  { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--blanco-dim); text-align: right; line-height: 1.8; }
+
+  @media (max-width: 600px) {
+    .page { padding: 48px 20px; }
+    .hero { grid-template-columns: 1fr; padding: 32px; }
+    .hero-side { border-left: none; border-top: 1px solid var(--borde); padding: 20px 0 0; text-align: left; }
+    .logo-grid, .ui-grid, .use-grid { grid-template-columns: 1fr; }
+    .pal-grid { grid-template-columns: repeat(4, 1fr); }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .type-disp, .type-disp-i { font-size: 48px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <span class="hero-sup">Sistema de gestión — Identidad de marca v2</span>
+      <div class="hero-wm">
+        <span class="don">Don</span>
+        <span class="hector">Héctor</span>
+      </div>
+      <div class="hero-sub">Licorera · Tunja · Colombia</div>
+    </div>
+    <div class="hero-side">
+      <span class="hero-year">Abierto</span>
+      <span class="hero-24h">24h</span>
+    </div>
+  </div>
+
+
+  <!-- LOGO -->
+  <section>
+    <div class="label">01 — Logotipo</div>
+
+    <div class="logo-grid">
+      <div class="logo-cell lc-dark">
+        <div class="lm">
+          <span class="lm-don">Don</span>
+          <span class="lm-hector">Héctor</span>
+        </div>
+        <span class="cell-tag">Versión principal</span>
+      </div>
+      <div class="logo-cell lc-ambar">
+        <div class="lm">
+          <span class="lm-don">Don</span>
+          <span class="lm-hector">Héctor</span>
+        </div>
+        <span class="cell-tag">Sobre color ámbar</span>
+      </div>
+      <div class="logo-cell lc-light">
+        <div class="lm">
+          <span class="lm-don">Don</span>
+          <span class="lm-hector">Héctor</span>
+        </div>
+        <span class="cell-tag">Sobre fondo claro</span>
+      </div>
+    </div>
+
+    <!-- Ícono -->
+    <div class="icon-row">
+      <div class="icon-cell">
+        <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
+          <!-- Botella -->
+          <rect x="40" y="9"  width="16" height="9"  rx="1" fill="#F0EBE0" opacity="0.2"/>
+          <rect x="38" y="17" width="20" height="6"  rx="1" fill="#F0EBE0" opacity="0.25"/>
+          <path d="M33 26 Q31 36 31 48 L31 77 Q31 79 33 79 L63 79 Q65 79 65 77 L65 48 Q65 36 63 26 Z"
+                stroke="#F0EBE0" stroke-width="1" fill="none" opacity="0.3"/>
+          <!-- Líquido ámbar -->
+          <path d="M31 58 L65 58 L65 77 Q65 79 63 79 L33 79 Q31 79 31 77 Z"
+                fill="#C8920A" opacity="0.5"/>
+          <!-- Reflejo -->
+          <line x1="37" y1="32" x2="37" y2="72" stroke="#F0EBE0" stroke-width="0.6" opacity="0.15"/>
+          <!-- Luna -->
+          <path d="M68 16 a10 10 0 1 1-9.4 13.4 A7.5 7.5 0 1 0 68 16z"
+                fill="#C8920A" opacity="0.85"/>
+        </svg>
+      </div>
+      <div class="icon-cell inv">
+        <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
+          <rect x="40" y="9"  width="16" height="9"  rx="1" fill="#0A0800" opacity="0.2"/>
+          <rect x="38" y="17" width="20" height="6"  rx="1" fill="#0A0800" opacity="0.25"/>
+          <path d="M33 26 Q31 36 31 48 L31 77 Q31 79 33 79 L63 79 Q65 79 65 77 L65 48 Q65 36 63 26 Z"
+                stroke="#0A0800" stroke-width="1" fill="none" opacity="0.35"/>
+          <path d="M31 58 L65 58 L65 77 Q65 79 63 79 L33 79 Q31 79 31 77 Z"
+                fill="#C8920A" opacity="0.6"/>
+          <path d="M68 16 a10 10 0 1 1-9.4 13.4 A7.5 7.5 0 1 0 68 16z"
+                fill="#8A6200" opacity="0.85"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- App icons -->
+    <div class="label" style="margin-top:40px; margin-bottom:24px;">Ícono de aplicación</div>
+    <div class="app-row">
+      <div class="app-wrap">
+        <div class="app-icon ai-xl">
+          <svg viewBox="0 0 96 96" fill="none">
+            <path d="M33 26 Q31 36 31 48 L31 77 Q31 79 33 79 L63 79 Q65 79 65 77 L65 48 Q65 36 63 26 Z"
+                  stroke="#F0EBE0" stroke-width="1.2" fill="none" opacity="0.35"/>
+            <path d="M31 58 L65 58 L65 77 Q65 79 63 79 L33 79 Q31 79 31 77 Z" fill="#C8920A" opacity="0.65"/>
+            <path d="M68 16 a10 10 0 1 1-9.4 13.4 A7.5 7.5 0 1 0 68 16z" fill="#C8920A"/>
+            <rect x="40" y="9" width="16" height="6" rx="1" fill="#F0EBE0" opacity="0.2"/>
+            <rect x="38" y="14" width="20" height="5" rx="1" fill="#F0EBE0" opacity="0.25"/>
+          </svg>
+        </div>
+        <div class="app-tag">512 × 512</div>
+      </div>
+      <div class="app-wrap">
+        <div class="app-icon ai-lg">
+          <svg viewBox="0 0 96 96" fill="none">
+            <path d="M33 26 Q31 36 31 48 L31 77 Q31 79 33 79 L63 79 Q65 79 65 77 L65 48 Q65 36 63 26 Z"
+                  stroke="#F0EBE0" stroke-width="1.2" fill="none" opacity="0.35"/>
+            <path d="M31 58 L65 58 L65 77 Q65 79 63 79 L33 79 Q31 79 31 77 Z" fill="#C8920A" opacity="0.65"/>
+            <path d="M68 16 a10 10 0 1 1-9.4 13.4 A7.5 7.5 0 1 0 68 16z" fill="#C8920A"/>
+          </svg>
+        </div>
+        <div class="app-tag">192 × 192</div>
+      </div>
+      <div class="app-wrap">
+        <div class="app-icon ai-md">
+          <svg viewBox="0 0 96 96" fill="none">
+            <path d="M33 26 Q31 36 31 48 L31 77 Q31 79 33 79 L63 79 Q65 79 65 77 L65 48 Q65 36 63 26 Z"
+                  stroke="#F0EBE0" stroke-width="1.5" fill="none" opacity="0.4"/>
+            <path d="M31 58 L65 58 L65 77 Q65 79 63 79 L33 79 Q31 79 31 77 Z" fill="#C8920A" opacity="0.7"/>
+            <circle cx="66" cy="20" r="9" fill="#C8920A"/>
+            <circle cx="62" cy="17" r="7" fill="#131310"/>
+          </svg>
+        </div>
+        <div class="app-tag">48 × 48</div>
+      </div>
+      <div class="app-wrap">
+        <div class="app-icon ai-sm">
+          <svg viewBox="0 0 96 96" fill="none">
+            <rect x="30" y="22" width="36" height="57" rx="3" stroke="#F0EBE0" stroke-width="2" fill="none" opacity="0.3"/>
+            <rect x="30" y="58" width="36" height="21" rx="1" fill="#C8920A" opacity="0.7"/>
+            <circle cx="68" cy="18" r="9" fill="#C8920A"/>
+            <circle cx="64" cy="15" r="7" fill="#131310"/>
+          </svg>
+        </div>
+        <div class="app-tag">32 × 32</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- PALETA -->
+  <section>
+    <div class="label">02 — Paleta de color</div>
+
+    <div class="pal-grid">
+      <div class="swatch" style="background:#0A0A08;">
+        <span class="sw-name" style="color:#3A3A34;">Negro<br>base</span>
+        <span class="sw-hex"  style="color:#3A3A34;">#0A0A08</span>
+      </div>
+      <div class="swatch" style="background:#131310;">
+        <span class="sw-name" style="color:#4A4A44;">Superficie</span>
+        <span class="sw-hex"  style="color:#4A4A44;">#131310</span>
+      </div>
+      <div class="swatch" style="background:#252520;">
+        <span class="sw-name" style="color:#6A6A60;">Borde</span>
+        <span class="sw-hex"  style="color:#6A6A60;">#252520</span>
+      </div>
+      <div class="swatch" style="background:#C8920A;">
+        <span class="sw-name" style="color:rgba(10,8,0,0.85);">Ámbar<br>principal</span>
+        <span class="sw-hex"  style="color:rgba(10,8,0,0.55);">#C8920A</span>
+      </div>
+      <div class="swatch" style="background:#E0A820;">
+        <span class="sw-name" style="color:rgba(10,8,0,0.85);">Ámbar<br>claro</span>
+        <span class="sw-hex"  style="color:rgba(10,8,0,0.55);">#E0A820</span>
+      </div>
+      <div class="swatch" style="background:#4A7A28;">
+        <span class="sw-name" style="color:rgba(240,235,224,0.9);">Verde<br>confirmación</span>
+        <span class="sw-hex"  style="color:rgba(240,235,224,0.55);">#4A7A28</span>
+      </div>
+      <div class="swatch" style="background:#F0EBE0;">
+        <span class="sw-name" style="color:#3A3A34;">Blanco<br>cálido</span>
+        <span class="sw-hex"  style="color:#8A8478;">#F0EBE0</span>
+      </div>
+    </div>
+
+    <div class="prop-row" style="margin-top:1px;">
+      <div class="prop-item">
+        <span class="prop-pct" style="color:var(--blanco-dim);">65%</span>
+        <span class="prop-name" style="color:var(--blanco-dim);">Negro · fondos</span>
+      </div>
+      <div class="prop-item">
+        <span class="prop-pct" style="color:var(--ambar);">25%</span>
+        <span class="prop-name" style="color:var(--ambar);">Ámbar · protagonista</span>
+      </div>
+      <div class="prop-item">
+        <span class="prop-pct" style="color:var(--verde);">10%</span>
+        <span class="prop-name" style="color:var(--verde);">Verde · confirmación</span>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TIPOGRAFÍA -->
+  <section>
+    <div class="label">03 — Tipografía</div>
+
+    <div class="type-block">
+      <div class="type-disp">Don</div>
+      <div class="type-disp-i">Héctor</div>
+      <span class="type-meta">Cormorant Garamond · Light 300 + Light Italic · Display</span>
+    </div>
+
+    <div class="type-block">
+      <div class="type-h2">Inventario · Ventas · Mayoristas · Gastos</div>
+      <span class="type-meta">Cormorant Garamond · Regular 400 · Subtítulos de módulo</span>
+    </div>
+
+    <div class="type-block">
+      <div class="type-data">$1.842.000 · 96 uds · 24h</div>
+      <span class="type-meta">DM Mono · Regular 400 · Valores y cifras COP</span>
+    </div>
+
+    <div class="type-block">
+      <div class="type-label">Código de barras · Stock mínimo · Método de pago</div>
+      <span class="type-meta">DM Mono · Light 300 · Uppercase · Etiquetas de interfaz</span>
+    </div>
+
+    <div class="type-block">
+      <div class="type-ambar">↑ Stock disponible · Pago confirmado · Activo</div>
+      <span class="type-meta">DM Mono · Medium 500 · Ámbar · Estados y alertas activas</span>
+    </div>
+  </section>
+
+
+  <!-- COMPONENTES UI -->
+  <section>
+    <div class="label">04 — Componentes de interfaz</div>
+
+    <div class="ui-grid">
+
+      <!-- Lista inventario -->
+      <div class="ui-panel">
+        <span class="type-meta" style="margin-bottom:20px; display:block;">Inventario</span>
+
+        <div class="prod-row">
+          <div>
+            <span class="pnm">Aguardiente Néctar</span>
+            <span class="pct">Aguardiente · 750 ml</span>
+          </div>
+          <div>
+            <span class="ppr">$32.000</span>
+            <span class="pst ok">↑ 84 uds.</span>
+          </div>
+        </div>
+
+        <div class="prod-row">
+          <div>
+            <span class="pnm">Whisky Old Parr 12</span>
+            <span class="pct">Whisky · 750 ml</span>
+          </div>
+          <div>
+            <span class="ppr">$185.000</span>
+            <span class="pst low">↓ 4 uds. — alerta</span>
+          </div>
+        </div>
+
+        <div class="prod-row">
+          <div>
+            <span class="pnm">Ron Viejo de Caldas</span>
+            <span class="pct">Ron · 750 ml</span>
+          </div>
+          <div>
+            <span class="ppr">$58.000</span>
+            <span class="pst ok">↑ 22 uds.</span>
+          </div>
+        </div>
+
+        <div class="prod-row">
+          <div>
+            <span class="pnm">Cerveza Club Colombia</span>
+            <span class="pct">Cerveza · Lata 330 ml</span>
+          </div>
+          <div>
+            <span class="ppr">$4.500</span>
+            <span class="pst out">✕ Sin stock</span>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:20px;">
+          <span class="badge badge-am">Alerta stock</span>
+          <span class="badge badge-vd">Disponible</span>
+          <span class="badge badge-rd">Sin stock</span>
+          <span class="badge badge-nt">Inactivo</span>
+        </div>
+      </div>
+
+      <!-- POS / Carrito -->
+      <div class="ui-panel surf">
+        <span class="type-meta" style="margin-bottom:20px; display:block;">Punto de venta — carrito</span>
+
+        <div class="pos-item">
+          <div>
+            <span class="pos-nm">Aguardiente Néctar</span>
+            <span class="pos-qty">× 3 uds.</span>
+          </div>
+          <span class="pos-sub">$96.000</span>
+        </div>
+        <div class="pos-item">
+          <div>
+            <span class="pos-nm">Old Parr 12</span>
+            <span class="pos-qty">× 1 ud.</span>
+          </div>
+          <span class="pos-sub">$185.000</span>
+        </div>
+        <div class="pos-item">
+          <div>
+            <span class="pos-nm">Cerveza Águila Lata</span>
+            <span class="pos-qty">× 6 uds.</span>
+          </div>
+          <span class="pos-sub">$27.000</span>
+        </div>
+
+        <div class="pos-total">
+          <span class="total-lbl">Total</span>
+          <span class="total-val">$308.000</span>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-pr">Registrar venta</button>
+          <button class="btn btn-gh">Cancelar →</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Stats + gráfica -->
+    <div style="margin-top:1px;">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span class="stat-lbl">Ventas hoy</span>
+          <span class="stat-val">$1.240.000</span>
+          <span class="delta d-up">↑ 18% vs ayer</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-lbl">Ventas del mes</span>
+          <span class="stat-val">$22.480.000</span>
+          <span class="delta d-up">↑ 11% vs anterior</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-lbl">Deuda mayoristas</span>
+          <span class="stat-val">$3.600.000</span>
+          <span class="delta d-warn">4 cuentas pendientes</span>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <span class="type-meta" style="margin-bottom:8px; display:block;">Ventas — últimos 7 días</span>
+        <div class="chart-bars">
+          <div class="bar bar-n" style="height:40%;"></div>
+          <div class="bar bar-n" style="height:58%;"></div>
+          <div class="bar bar-n" style="height:44%;"></div>
+          <div class="bar bar-n" style="height:72%;"></div>
+          <div class="bar bar-n" style="height:63%;"></div>
+          <div class="bar bar-a" style="height:91%;"></div>
+          <div class="bar bar-t" style="height:60%;"></div>
+        </div>
+        <div class="bar-labels">
+          <span class="bl">Lun</span>
+          <span class="bl">Mar</span>
+          <span class="bl">Mié</span>
+          <span class="bl">Jue</span>
+          <span class="bl">Vie</span>
+          <span class="bl a">Sáb</span>
+          <span class="bl t">Hoy</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login -->
+    <div style="margin-top:1px; display:grid; grid-template-columns: 1fr 1fr; gap:1px; background:var(--borde);">
+      <div class="ui-panel surf" style="display:flex; align-items:center; justify-content:center;">
+        <div class="login-box">
+          <div class="login-logo">
+            <div style="font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.28em; text-transform:uppercase; color:var(--ambar);">Don</div>
+            <div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:40px; font-weight:300; color:var(--blanco); line-height:1;">Héctor</div>
+            <div style="font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--blanco-dim); margin-top:4px;">Sistema de gestión</div>
+          </div>
+          <div style="height:1px; background:var(--borde); margin-bottom:28px;"></div>
+          <div class="field">
+            <span class="field-lbl">Correo electrónico</span>
+            <input class="field-inp" type="text" placeholder="admin@donhector.co"/>
+          </div>
+          <div class="field">
+            <span class="field-lbl">Contraseña</span>
+            <input class="field-inp" type="password" placeholder="••••••••"/>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-pr">Ingresar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones -->
+      <div class="ui-panel" style="display:flex; flex-direction:column; justify-content:center;">
+        <span class="type-meta" style="margin-bottom:24px; display:block;">Sistema de botones</span>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <button class="btn btn-pr" style="text-align:left;">Registrar venta</button>
+          <button class="btn btn-ol" style="text-align:left;">Ver inventario</button>
+          <button class="btn btn-gh">Exportar reporte →</button>
+        </div>
+        <div style="margin-top:28px;">
+          <span class="type-meta" style="margin-bottom:12px; display:block;">Badges de estado</span>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <span class="badge badge-am">Pendiente</span>
+            <span class="badge badge-vd">Pagado</span>
+            <span class="badge badge-nt">Mayorista</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- GUÍA DE USO -->
+  <section>
+    <div class="label">05 — Guía de uso</div>
+    <div class="use-grid">
+      <div class="use-panel use-ok">
+        <div class="use-tag">Correcto</div>
+        <div class="use-item">El ámbar es el color protagonista: CTA principal, cifras destacadas, nombre de la marca.</div>
+        <div class="use-item">Usar el negro como base dominante — la pantalla "respira" oscuridad.</div>
+        <div class="use-item">Verde exclusivamente para estados positivos: pagado, stock OK, confirmación.</div>
+        <div class="use-item">Cormorant Garamond para la marca y los nombres de producto únicamente.</div>
+        <div class="use-item">DM Mono para toda la interfaz funcional: etiquetas, cifras, botones.</div>
+        <div class="use-item">El botón primario lleva texto en negro oscuro sobre fondo ámbar — nunca blanco.</div>
+      </div>
+      <div class="use-panel use-no">
+        <div class="use-tag">Incorrecto</div>
+        <div class="use-item">No usar amarillo brillante o neón — el ámbar debe evocar oro envejecido, no señalización.</div>
+        <div class="use-item">No combinar ámbar y verde en el mismo elemento — son colores de jerarquías distintas.</div>
+        <div class="use-item">No usar gradientes, glows ni efectos de brillo sobre el ámbar.</div>
+        <div class="use-item">No usar el ámbar como fondo de pantallas completas — reservarlo a elementos puntuales.</div>
+        <div class="use-item">No mezclar con magenta o colores fríos — rompen la temperatura cálida del sistema.</div>
+        <div class="use-item">No usar tipografías sans-serif genéricas (Inter, Roboto) — destruyen el carácter editorial.</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- PIE -->
+  <div class="folio">
+    <span class="folio-lft">Don Héctor</span>
+    <div class="folio-rt">
+      Manual de marca v2.0 — Ámbar<br>
+      Sistema de gestión · 2026
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
