@@ -298,7 +298,10 @@ class _RegistrarPagoSheetState extends ConsumerState<_RegistrarPagoSheet> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _montoController,
-              decoration: const InputDecoration(labelText: 'Monto'),
+              decoration: const InputDecoration(
+                labelText: 'Monto',
+                prefixText: '\$ ',
+              ),
               keyboardType: TextInputType.number,
               inputFormatters: [CopInputFormatter()],
               validator: (value) {
@@ -313,15 +316,9 @@ class _RegistrarPagoSheetState extends ConsumerState<_RegistrarPagoSheet> {
               initialValue: _metodoPago,
               decoration: const InputDecoration(labelText: 'Metodo de pago'),
               items: const [
-                DropdownMenuItem(
-                  value: MetodoPago.efectivo,
-                  child: Text('Efectivo'),
-                ),
+                DropdownMenuItem(value: MetodoPago.efectivo, child: Text('Efectivo')),
                 DropdownMenuItem(value: MetodoPago.nequi, child: Text('Nequi')),
-                DropdownMenuItem(
-                  value: MetodoPago.daviplata,
-                  child: Text('Daviplata'),
-                ),
+                DropdownMenuItem(value: MetodoPago.transferencia, child: Text('Bancolombia')),
               ],
               onChanged: (value) {
                 if (value == null) return;

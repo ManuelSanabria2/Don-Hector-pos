@@ -52,19 +52,13 @@ class MayoristasRepository {
           cantidad,
           precio_unitario,
           productos (nombre, categoria_id),
-          cobros_mayoristas (
-            id,
-            cliente_id,
-            total_venta,
-            total_pagado,
-            saldo,
-            estado,
-            created_at,
-            ventas (fecha, tipo, metodo_pago, estado)
+          ventas!inner (
+            fecha,
+            cliente_id
           )
         ''')
-        .eq('cobros_mayoristas.cliente_id', clienteId)
-        .order('cobros_mayoristas.created_at', ascending: false);
+        .eq('ventas.cliente_id', clienteId)
+        .order('created_at', ascending: false);
     return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 

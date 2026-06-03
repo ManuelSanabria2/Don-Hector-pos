@@ -140,7 +140,6 @@ class _DashboardView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final resumenHoy = ref.watch(resumenHoyProvider);
-    final stockBajo = ref.watch(stockBajoProvider);
     final colors = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
@@ -254,99 +253,6 @@ class _DashboardView extends ConsumerWidget {
                       ],
                     ),
                   ],
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-
-          stockBajo.when(
-            loading: () => const Card(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-            error: (error, stack) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('Error en alertas de stock: $error'),
-              ),
-            ),
-            data: (productos) {
-              final alertsToShow = productos.take(3).toList();
-
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.warning_amber_rounded, color: colors.error, size: 28),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Alertas de Stock Bajo',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          const Spacer(),
-                          if (productos.isNotEmpty)
-                            TextButton(
-                              onPressed: () {
-                                ref.read(homeTabIndexProvider.notifier).state = 1;
-                              },
-                              child: const Text('Ver todos'),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      if (productos.isEmpty)
-                        Text(
-                          '🎉 Todo al día. Ningún producto con stock bajo.',
-                          style: TextStyle(color: colors.onSurfaceVariant),
-                        )
-                      else ...[
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: alertsToShow.length,
-                          separatorBuilder: (_, __) => const Divider(),
-                          itemBuilder: (context, index) {
-                            final p = alertsToShow[index];
-                            return ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                p.nombre,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              subtitle: Text(
-                                'Stock actual: ${p.stockActual} / Mínimo: ${p.stockMinimo}',
-                                style: TextStyle(color: colors.onSurfaceVariant),
-                              ),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: colors.error.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Agotándose',
-                                  style: TextStyle(
-                                    color: colors.error,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
                 ),
               );
             },

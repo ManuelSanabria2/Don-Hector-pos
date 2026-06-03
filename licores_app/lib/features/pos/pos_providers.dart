@@ -7,6 +7,8 @@ import '../../data/models/venta_enums.dart';
 import '../../data/repositories/inventario_repository.dart';
 import '../../data/repositories/mayoristas_repository.dart';
 
+import '../mayoristas/mayoristas_providers.dart';
+
 final posBusquedaProvider = StateProvider.autoDispose<String>((ref) => '');
 
 final posClienteBusquedaProvider = StateProvider.autoDispose<String>(
@@ -20,15 +22,16 @@ final posProductosProvider = FutureProvider.autoDispose<List<Producto>>((ref) {
       .getProductos(busqueda: busqueda);
 });
 
-final posClientesProvider = FutureProvider.autoDispose<List<ClienteMayorista>>((
+final posClientesProvider = FutureProvider.autoDispose<List<ClienteConCuenta>>((
   ref,
 ) async {
   final busqueda = ref.watch(posClienteBusquedaProvider).trim().toLowerCase();
-  final clientes = await ref.watch(mayoristasRepositoryProvider).getClientes();
+  final clientesConCuenta = await ref.watch(mayoristasClientesProvider.future);
 
-  if (busqueda.isEmpty) return clientes;
+  if (busqueda.isEmpty) return clientesConCuenta;
 
-  return clientes.where((cliente) {
+  return clientesConCuenta.where((item) {
+    final cliente = item.cliente;
     return cliente.nombre.toLowerCase().contains(busqueda) ||
         (cliente.telefono?.contains(busqueda) ?? false) ||
         (cliente.nit?.toLowerCase().contains(busqueda) ?? false);
@@ -91,19 +94,20 @@ class PosCartState {
 class PosCartController extends StateNotifier<PosCartState> {
   PosCartController() : super(const PosCartState());
 
-  void addProduct(Producto producto) {
+  void addProduct(Producto producto, {int cantidad = 1}) {
     final index = state.items.indexWhere(
       (item) => item.producto.id == producto.id,
     );
 
     if (index == -1) {
       if (producto.stockActual <= 0) return;
+      final actualCant = cantidad <= producto.stockActual ? cantidad : producto.stockActual;
       state = state.copyWith(
         items: [
           ...state.items,
           CarritoItem(
             producto: producto,
-            cantidad: 1,
+            cantidad: actualCant,
             precioUnitario: state.tipoVenta == TipoVenta.mayorista
                 ? producto.precioMayorista
                 : producto.precioPublico,
@@ -113,18 +117,18 @@ class PosCartController extends StateNotifier<PosCartState> {
       return;
     }
 
-    increment(producto.id);
+    increment(producto.id, cantidad: cantidad);
   }
 
-  void increment(String productoId) {
+  void increment(String productoId, {int cantidad = 1}) {
     state = state.copyWith(
       items: [
         for (final item in state.items)
           if (item.producto.id == productoId)
             item.copyWith(
-              cantidad: item.cantidad < item.producto.stockActual
-                  ? item.cantidad + 1
-                  : item.cantidad,
+              cantidad: item.cantidad + cantidad <= item.producto.stockActual
+                  ? item.cantidad + cantidad
+                  : item.producto.stockActual,
             )
           else
             item,

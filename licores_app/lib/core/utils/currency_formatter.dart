@@ -2,13 +2,15 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 abstract final class CurrencyFormatter {
-  static final NumberFormat _cop = NumberFormat.currency(
+  static final NumberFormat _copNumber = NumberFormat.currency(
     locale: 'es_CO',
-    symbol: r'$',
+    symbol: '',
     decimalDigits: 0,
   );
 
-  static String cop(num value) => _cop.format(value);
+  static String cop(num value) => '\$ ${_copNumber.format(value).trim()}';
+
+  static String copNumberOnly(num value) => _copNumber.format(value).trim();
 
   static num parseCop(String value) {
     final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
@@ -17,12 +19,7 @@ abstract final class CurrencyFormatter {
 }
 
 String formatCOP(double monto) {
-  final format = NumberFormat.currency(
-    locale: 'es_CO',
-    symbol: r'$',
-    decimalDigits: 0,
-  );
-  return format.format(monto);
+  return CurrencyFormatter.cop(monto);
 }
 
 
@@ -37,7 +34,7 @@ class CopInputFormatter extends TextInputFormatter {
       return const TextEditingValue();
     }
 
-    final formatted = CurrencyFormatter.cop(num.parse(digits));
+    final formatted = CurrencyFormatter.copNumberOnly(num.parse(digits));
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),

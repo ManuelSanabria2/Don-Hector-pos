@@ -69,28 +69,44 @@ class _ClienteCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final hasDebt = item.tieneCobroPendiente;
 
+    final cardColor = hasDebt ? colors.primary : null;
+    final textColor = hasDebt ? Colors.black : null;
+    final subColor = hasDebt ? Colors.black87 : null;
+
     return Card(
-      color: hasDebt ? Colors.amber.shade50 : null,
+      color: cardColor,
       child: ListTile(
         onTap: () => context.push(AppRoutes.clienteDetail, extra: item.cliente),
         leading: CircleAvatar(
-          backgroundColor: hasDebt ? Colors.amber.shade700 : colors.primary,
-          foregroundColor: hasDebt ? Colors.black : colors.onPrimary,
+          backgroundColor: hasDebt ? Colors.black : colors.primary,
+          foregroundColor: hasDebt ? colors.primary : colors.onPrimary,
           child: Text(item.cliente.nombre.characters.first.toUpperCase()),
         ),
         title: Row(
           children: [
-            Expanded(child: Text(item.cliente.nombre)),
+            Expanded(
+              child: Text(
+                item.cliente.nombre,
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: hasDebt ? FontWeight.bold : null,
+                ),
+              ),
+            ),
             if (hasDebt)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade700,
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
+                child: Text(
                   'Cobro pendiente',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: colors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
           ],
@@ -99,8 +115,12 @@ class _ClienteCard extends StatelessWidget {
           hasDebt
               ? 'Debe ${CurrencyFormatter.cop(item.deudaPendiente)}'
               : 'Sin deuda pendiente',
+          style: TextStyle(color: subColor),
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: textColor,
+        ),
       ),
     );
   }

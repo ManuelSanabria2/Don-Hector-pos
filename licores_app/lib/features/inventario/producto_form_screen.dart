@@ -26,6 +26,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   late final TextEditingController _costoController;
   late final TextEditingController _stockActualController;
   late final TextEditingController _stockMinimoController;
+  late final TextEditingController _agregarStockController;
   late final TextEditingController _barcodeController;
   String? _categoriaId;
   bool _activo = true;
@@ -42,15 +43,15 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     _precioPublicoController = TextEditingController(
       text: producto == null
           ? ''
-          : CurrencyFormatter.cop(producto.precioPublico),
+          : CurrencyFormatter.copNumberOnly(producto.precioPublico),
     );
     _precioMayoristaController = TextEditingController(
       text: producto == null
           ? ''
-          : CurrencyFormatter.cop(producto.precioMayorista),
+          : CurrencyFormatter.copNumberOnly(producto.precioMayorista),
     );
     _costoController = TextEditingController(
-      text: producto == null ? '' : CurrencyFormatter.cop(producto.costo),
+      text: producto == null ? '' : CurrencyFormatter.copNumberOnly(producto.costo),
     );
     _stockActualController = TextEditingController(
       text: producto?.stockActual.toString() ?? '0',
@@ -58,6 +59,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     _stockMinimoController = TextEditingController(
       text: producto?.stockMinimo.toString() ?? '5',
     );
+    _agregarStockController = TextEditingController(text: '0');
     _barcodeController = TextEditingController(
       text: producto?.codigoBarras ?? '',
     );
@@ -73,6 +75,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     _costoController.dispose();
     _stockActualController.dispose();
     _stockMinimoController.dispose();
+    _agregarStockController.dispose();
     _barcodeController.dispose();
     super.dispose();
   }
@@ -89,6 +92,11 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
 
     setState(() => _saving = true);
 
+    final extraStock = _producto != null ? (int.tryParse(_agregarStockController.text) ?? 0) : 0;
+    final stockActual = _producto != null
+        ? (_producto!.stockActual + extraStock)
+        : int.parse(_stockActualController.text);
+
     final producto = Producto(
       id: _producto?.id ?? '',
       nombre: _nombreController.text.trim(),
@@ -98,8 +106,8 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
         _precioMayoristaController.text,
       ),
       costo: CurrencyFormatter.parseCop(_costoController.text),
-      stockActual: int.parse(_stockActualController.text),
-      stockMinimo: int.parse(_stockMinimoController.text),
+      stockActual: stockActual,
+      stockMinimo: _producto?.stockMinimo ?? 5,
       codigoBarras: _barcodeController.text.trim().isEmpty
           ? null
           : _barcodeController.text.trim(),
@@ -196,20 +204,23 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                   child: _IntegerField(
                     controller: _stockActualController,
                     label: 'Stock actual',
+                    enabled: _producto == null,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _IntegerField(
-                    controller: _stockMinimoController,
-                    label: 'Stock minimo',
-                    validator: (value) {
-                      final stockMinimo = int.tryParse(value ?? '') ?? -1;
-                      if (stockMinimo < 0) return 'Debe ser >= 0';
-                      return null;
-                    },
+                if (_producto != null) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _IntegerField(
+                      controller: _agregarStockController,
+                      label: 'Agregar stock',
+                      validator: (value) {
+                        final val = int.tryParse(value ?? '') ?? 0;
+                        if (val < 0) return 'Debe ser >= 0';
+                        return null;
+                      },
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -264,7 +275,10 @@ class _MoneyField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixText: '\$ ',
+      ),
       keyboardType: TextInputType.number,
       inputFormatters: [CopInputFormatter()],
       validator: validator,
@@ -277,11 +291,13 @@ class _IntegerField extends StatelessWidget {
     required this.controller,
     required this.label,
     this.validator,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
   final String label;
   final FormFieldValidator<String>? validator;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -291,6 +307,7 @@ class _IntegerField extends StatelessWidget {
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
       validator: validator,
+      enabled: enabled,
     );
   }
 }

@@ -13,19 +13,23 @@ final inventarioCategoriaProvider = StateProvider.autoDispose<String?>((ref) {
 });
 
 final inventarioCategoriasProvider =
-    FutureProvider.autoDispose<List<Categoria>>((ref) {
-      return ref.watch(inventarioRepositoryProvider).listarCategorias();
+    FutureProvider.autoDispose<List<Categoria>>((ref) async {
+      final list = await ref.watch(inventarioRepositoryProvider).listarCategorias();
+      list.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+      return list;
     });
 
 final inventarioProductosProvider = FutureProvider.autoDispose<List<Producto>>((
   ref,
-) {
+) async {
   final busqueda = ref.watch(inventarioBusquedaProvider);
   final categoriaId = ref.watch(inventarioCategoriaProvider);
 
-  return ref
+  final list = await ref
       .watch(inventarioRepositoryProvider)
       .getProductos(busqueda: busqueda, categoriaId: categoriaId);
+  list.sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+  return list;
 });
 
 final stockBajoProvider = StreamProvider.autoDispose<List<Producto>>((ref) {

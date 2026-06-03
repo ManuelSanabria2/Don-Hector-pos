@@ -9,9 +9,12 @@ import '../../core/utils/currency_formatter.dart';
 import '../../data/models/carrito_item.dart';
 import '../../data/models/producto.dart';
 import '../../data/models/venta_enums.dart';
+import '../../data/models/pago_mayorista.dart';
 import '../../data/repositories/inventario_repository.dart';
 import '../../data/repositories/pos_repository.dart';
+import '../../data/repositories/mayoristas_repository.dart';
 import '../inventario/inventario_providers.dart';
+import '../mayoristas/mayoristas_providers.dart';
 import 'pos_providers.dart';
 import 'pos_receipt_pdf.dart';
 
@@ -158,13 +161,20 @@ class _ProductTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final disabled = producto.stockActual <= 0;
+    
+    final categorias = ref.watch(inventarioCategoriasProvider).value ?? [];
+    final isCerveza = producto.categoriaId != null &&
+        categorias.any((c) => c.id == producto.categoriaId && c.nombre.toLowerCase() == 'cerveza');
 
     return Card(
       child: ListTile(
         enabled: !disabled,
         onTap: disabled
             ? null
-            : () => ref.read(posCartProvider.notifier).addProduct(producto),
+            : () => ref.read(posCartProvider.notifier).addProduct(
+                  producto,
+                  cantidad: isCerveza ? 6 : 1,
+                ),
         title: Text(producto.nombre),
         subtitle: Text(
           '${CurrencyFormatter.cop(producto.precioPublico)} · Stock ${producto.stockActual}',
@@ -183,12 +193,13 @@ class _CartPanel extends ConsumerStatefulWidget {
 }
 
 class _CartPanelState extends ConsumerState<_CartPanel> {
-  final _descuentoController = TextEditingController();
+  final _abonoController = TextEditingController();
+  bool _debeTodo = true;
   bool _submitting = false;
 
   @override
   void dispose() {
-    _descuentoController.dispose();
+    _abonoController.dispose();
     super.dispose();
   }
 
@@ -216,6 +227,24 @@ class _CartPanelState extends ConsumerState<_CartPanel> {
             items: cart.items,
           );
 
+      if (cart.tipoVenta == TipoVenta.mayorista && !_debeTodo) {
+        final abono = CurrencyFormatter.parseCop(_abonoController.text);
+        if (abono > 0) {
+          final mayoristasRepo = ref.read(mayoristasRepositoryProvider);
+          final cobros = await mayoristasRepo.getCobrosCliente(cart.clienteId!);
+          final cobroVenta = cobros.firstWhere((c) => c.ventaId == ventaId);
+          
+          await mayoristasRepo.registrarPago(PagoMayorista(
+            id: '',
+            cobroId: cobroVenta.id,
+            monto: abono,
+            metodoPago: cart.metodoPago,
+            fecha: DateTime.now(),
+            notas: 'Abono inicial en venta',
+          ));
+        }
+      }
+
       final receipt = PosReceiptData(
         ventaId: ventaId,
         fecha: DateTime.now(),
@@ -230,7 +259,11 @@ class _CartPanelState extends ConsumerState<_CartPanel> {
       ref.invalidate(posProductosProvider);
       ref.invalidate(inventarioProductosProvider);
       ref.invalidate(stockBajoProvider);
-      _descuentoController.clear();
+      ref.invalidate(mayoristasClientesProvider);
+      _abonoController.clear();
+      setState(() {
+        _debeTodo = true;
+      });
 
       if (!mounted) return;
       await _showSuccessDialog(context, receipt);
@@ -278,89 +311,110 @@ class _CartPanelState extends ConsumerState<_CartPanel> {
   Widget build(BuildContext context) {
     final cart = ref.watch(posCartProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Carrito',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.blanco,
-              ),
-        ),
-        const SizedBox(height: 12),
-        SegmentedButton<TipoVenta>(
-          segments: const [
-            ButtonSegment(value: TipoVenta.publico, label: Text('Publico')),
-            ButtonSegment(value: TipoVenta.mayorista, label: Text('Mayorista')),
-          ],
-          selected: {cart.tipoVenta},
-          onSelectionChanged: (values) {
-            ref.read(posCartProvider.notifier).setTipoVenta(values.first);
-          },
-        ),
-        if (cart.tipoVenta == TipoVenta.mayorista) ...[
-          const SizedBox(height: 12),
-          const _ClienteSelector(),
-        ],
-        const SizedBox(height: 12),
-        Expanded(
-          child: cart.items.isEmpty
-              ? const Center(child: Text('Agrega productos a la venta'))
-              : ListView.separated(
-                  itemCount: cart.items.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    return _CartItemTile(item: cart.items[index]);
-                  },
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Carrito',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppColors.blanco,
                 ),
-        ),
-        const Divider(height: 24),
-        TextFormField(
-          controller: _descuentoController,
-          decoration: const InputDecoration(labelText: 'Descuento'),
-          keyboardType: TextInputType.number,
-          inputFormatters: [CopInputFormatter()],
-          onChanged: (value) {
-            ref
-                .read(posCartProvider.notifier)
-                .setDescuento(CurrencyFormatter.parseCop(value));
-          },
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<MetodoPago>(
-          initialValue: cart.metodoPago,
-          decoration: const InputDecoration(labelText: 'Metodo de pago'),
-          items: const [
-            DropdownMenuItem(
-              value: MetodoPago.efectivo,
-              child: Text('Efectivo'),
-            ),
-            DropdownMenuItem(value: MetodoPago.nequi, child: Text('Nequi')),
-            DropdownMenuItem(
-              value: MetodoPago.daviplata,
-              child: Text('Daviplata'),
-            ),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<TipoVenta>(
+            segments: const [
+              ButtonSegment(value: TipoVenta.publico, label: Text('Publico')),
+              ButtonSegment(value: TipoVenta.mayorista, label: Text('Mayorista')),
+            ],
+            selected: {cart.tipoVenta},
+            onSelectionChanged: (values) {
+              ref.read(posCartProvider.notifier).setTipoVenta(values.first);
+            },
+          ),
+          if (cart.tipoVenta == TipoVenta.mayorista) ...[
+            const SizedBox(height: 12),
+            const _ClienteSelector(),
+            if (cart.clienteId != null) ...[
+              const SizedBox(height: 12),
+              _SaldoPendienteInfo(clienteId: cart.clienteId!),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Debe todo'),
+                value: _debeTodo,
+                onChanged: (value) {
+                  setState(() {
+                    _debeTodo = value ?? true;
+                    if (_debeTodo) {
+                      _abonoController.clear();
+                    }
+                  });
+                },
+              ),
+              if (!_debeTodo) ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _abonoController,
+                  decoration: const InputDecoration(
+                    labelText: 'Abono inicial',
+                    prefixText: '\$ ',
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [CopInputFormatter()],
+                ),
+              ],
+            ],
           ],
-          onChanged: (value) {
-            if (value == null) return;
-            ref.read(posCartProvider.notifier).setMetodoPago(value);
-          },
-        ),
-        const SizedBox(height: 12),
-        _Totals(cart: cart),
-        const SizedBox(height: 12),
-        FilledButton.icon(
-          onPressed: cart.canSubmit && !_submitting ? _registerSale : null,
-          icon: _submitting
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.check_circle),
-          label: const Text('Registrar venta'),
-        ),
-      ],
+          const SizedBox(height: 12),
+          if (cart.items.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: Text('Agrega productos a la venta')),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: cart.items.length,
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                return _CartItemTile(item: cart.items[index]);
+              },
+            ),
+          DropdownButtonFormField<MetodoPago>(
+            initialValue: cart.metodoPago,
+            decoration: const InputDecoration(labelText: 'Metodo de pago'),
+            items: const [
+              DropdownMenuItem(value: MetodoPago.efectivo, child: Text('Efectivo')),
+              DropdownMenuItem(value: MetodoPago.nequi, child: Text('Nequi')),
+              DropdownMenuItem(value: MetodoPago.transferencia, child: Text('Bancolombia')),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              ref.read(posCartProvider.notifier).setMetodoPago(value);
+            },
+          ),
+          const SizedBox(height: 12),
+          _Totals(cart: cart),
+          const SizedBox(height: 16),
+          SafeArea(
+            top: false,
+            bottom: true,
+            child: FilledButton.icon(
+              onPressed: cart.canSubmit && !_submitting ? _registerSale : null,
+              icon: _submitting
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check_circle),
+              label: const Text('Registrar venta'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -397,21 +451,22 @@ class _ClienteSelector extends ConsumerWidget {
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  for (final cliente in items)
+                  for (final item in items)
                     ListTile(
                       dense: true,
-                      selected: cliente.id == selectedId,
-                      title: Text(cliente.nombre),
-                      subtitle: cliente.telefono == null
-                          ? null
-                          : Text(cliente.telefono!),
-                      trailing: cliente.id == selectedId
+                      selected: item.cliente.id == selectedId,
+                      title: Text(item.cliente.nombre),
+                      subtitle: Text(
+                        'Deuda: ${CurrencyFormatter.cop(item.deudaPendiente)}'
+                        '${item.cliente.telefono != null ? " · ${item.cliente.telefono}" : ""}',
+                      ),
+                      trailing: item.cliente.id == selectedId
                           ? const Icon(Icons.check_circle)
                           : const Icon(Icons.circle_outlined),
                       onTap: () {
                         ref
                             .read(posCartProvider.notifier)
-                            .setCliente(cliente.id);
+                            .setCliente(item.cliente.id);
                       },
                     ),
                 ],
@@ -432,6 +487,10 @@ class _CartItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(posCartProvider.notifier);
+
+    final categorias = ref.watch(inventarioCategoriasProvider).value ?? [];
+    final isCerveza = item.producto.categoriaId != null &&
+        categorias.any((c) => c.id == item.producto.categoriaId && c.nombre.toLowerCase() == 'cerveza');
 
     return Card(
       child: Padding(
@@ -474,6 +533,18 @@ class _CartItemTile extends ConsumerWidget {
                   onPressed: () => controller.increment(item.producto.id),
                   icon: const Icon(Icons.add),
                 ),
+                if (isCerveza) ...[
+                  const SizedBox(width: 8),
+                  _GreenRoundButton(
+                    label: '+6',
+                    onPressed: () => controller.increment(item.producto.id, cantidad: 6),
+                  ),
+                  const SizedBox(width: 8),
+                  _GreenRoundButton(
+                    label: '+24',
+                    onPressed: () => controller.increment(item.producto.id, cantidad: 24),
+                  ),
+                ],
                 const Spacer(),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -503,9 +574,6 @@ class _Totals extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _TotalRow(label: 'Subtotal', value: cart.subtotal),
-        _TotalRow(label: 'Descuento', value: cart.descuento),
-        const Divider(),
         _TotalRow(label: 'Total', value: cart.total, bold: true),
       ],
     );
@@ -533,6 +601,82 @@ class _TotalRow extends StatelessWidget {
         children: [
           Expanded(child: Text(label, style: style)),
           Text(CurrencyFormatter.cop(value), style: style),
+        ],
+      ),
+    );
+  }
+}
+
+class _GreenRoundButton extends StatelessWidget {
+  const _GreenRoundButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 36,
+      child: RawMaterialButton(
+        onPressed: onPressed,
+        elevation: 0,
+        fillColor: AppColors.verde,
+        shape: const CircleBorder(),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'DMMono',
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SaldoPendienteInfo extends ConsumerWidget {
+  const _SaldoPendienteInfo({required this.clienteId});
+
+  final String clienteId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final list = ref.watch(mayoristasClientesProvider).value ?? [];
+    ClienteConCuenta? selected;
+    for (final item in list) {
+      if (item.cliente.id == clienteId) {
+        selected = item;
+        break;
+      }
+    }
+
+    if (selected == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.superficie,
+        border: Border.all(color: AppColors.borde),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Saldo pendiente',
+            style: TextStyle(color: AppColors.blancoD),
+          ),
+          Text(
+            CurrencyFormatter.cop(selected.deudaPendiente),
+            style: TextStyle(
+              color: selected.tieneCobroPendiente ? AppColors.ambar : AppColors.verde,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
