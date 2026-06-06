@@ -15,7 +15,7 @@ abstract final class AppColors {
   static const Color rojo = Color(0xFF9B2020);
 
   static const Color blanco = Color(0xFFF0EBE0);
-  static const Color blancoD = Color(0xFF8A8478);
+  static const Color blancoD = Color(0xFFB0AAA0);
   static const Color crema = Color(0xFF2A2820);
   static const Color gris = Color(0xFF3A3A34);
 }

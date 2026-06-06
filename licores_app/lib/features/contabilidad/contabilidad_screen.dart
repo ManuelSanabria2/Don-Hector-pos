@@ -11,6 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import 'contabilidad_providers.dart';
+import 'analisis_financiero_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../data/repositories/contabilidad_repository.dart';
 
@@ -128,28 +129,67 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
 
   Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
     return Card(
-      elevation: 2,
-      child: Padding(
+      elevation: 0,
+      color: AppColors.superficie,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.borde, width: 1.5),
+        ),
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: color.withOpacity(0.1),
-              child: Icon(icon, color: color),
+            Container(
+              padding: const EdgeInsets.all(10),
+              color: color.withOpacity(0.1),
+              child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey[700])),
-                  Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    title,
+                    style: const TextStyle(color: AppColors.blancoD, fontSize: 12, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(color: AppColors.blanco, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPieLegend(String title, String value, Color color) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          color: color,
+          margin: const EdgeInsets.only(top: 4),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(color: AppColors.blancoD, fontSize: 12)),
+              Text(value, style: const TextStyle(color: AppColors.blanco, fontSize: 13, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -174,6 +214,8 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
     final dias7 = ventas7Dias.value ?? [];
     final top = topProductos.value ?? [];
     final ventasHoyList = ventasHoy.value ?? [];
+    
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -188,112 +230,81 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
                     color: AppColors.blanco,
                   ),
             ),
-            FilledButton.icon(
-              onPressed: () => _exportarPdf(hoy, mes, top),
-              icon: const Icon(Icons.picture_as_pdf),
-              label: const Text('Exportar PDF'),
+            Wrap(
+              spacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AnalisisFinancieroScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.analytics_outlined),
+                  label: const Text('Análisis Financiero'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _exportarPdf(hoy, mes, top),
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text('Exportar PDF'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
         const SizedBox(height: 16),
-        _buildMetricCard(
-          'Ventas Hoy (${hoy['num_ventas'] ?? 0} txs)',
-          '\$ ${currency.format(hoy['total_ventas'] ?? 0)}',
-          Icons.today,
-          Colors.blue,
-        ),
-        _buildMetricCard(
-          'Ventas Este Mes',
-          '\$ ${currency.format(mes['ventas_mes'] ?? 0)}',
-          Icons.calendar_month,
-          Colors.green,
-        ),
-        _buildMetricCard(
-          'Gastos Este Mes',
-          '\$ ${currency.format(mes['gastos_mes'] ?? 0)}',
-          Icons.money_off,
-          Colors.red,
-        ),
-        _buildMetricCard(
-          'Utilidad Estimada',
-          '\$ ${currency.format(mes['utilidad_estimada'] ?? 0)}',
-          Icons.trending_up,
-          Colors.teal,
-        ),
-        _buildMetricCard(
-          'Deuda Mayoristas',
-          '\$ ${currency.format(mes['deuda_pendiente'] ?? 0)}',
-          Icons.warning_amber,
-          Colors.orange,
-        ),
-        const SizedBox(height: 24),
-        Text('Ventas últimos 7 días', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 250,
-          child: RepaintBoundary(
-            key: _chartKey,
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor, // Background for the image export
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  barTouchData: BarTouchData(enabled: false),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          if (value.toInt() < 0 || value.toInt() >= dias7.length) {
-                            return const SizedBox.shrink();
-                          }
-                          // Reverse because query is desc
-                          final row = dias7[dias7.length - 1 - value.toInt()];
-                          final dateStr = row['dia'] as String?;
-                          if (dateStr == null) return const SizedBox.shrink();
-                          final date = DateTime.parse(dateStr);
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(DateFormat('E', 'es').format(date)),
-                          );
-                        },
-                      ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 50,
-                        getTitlesWidget: (value, meta) {
-                          if (value == 0) return const SizedBox.shrink();
-                          return Text(NumberFormat.compact().format(value));
-                        },
-                      ),
-                    ),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  gridData: const FlGridData(show: true, drawVerticalLine: false),
-                  borderData: FlBorderData(show: false),
-                  barGroups: List.generate(dias7.length, (i) {
-                    final row = dias7[dias7.length - 1 - i];
-                    final total = (row['total_ventas'] as num?)?.toDouble() ?? 0.0;
-                    return BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: total,
-                          color: Colors.blue,
-                          width: 16,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                        ),
-                      ],
-                    );
-                  }),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 900 ? 5 : (constraints.maxWidth >= 600 ? 3 : 2);
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: columns,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: constraints.maxWidth >= 900 ? 2.2 : 2.5,
+              children: [
+                _buildMetricCard(
+                  'Ventas Hoy (${hoy['num_ventas'] ?? 0} txs)',
+                  '\$ ${currency.format(hoy['total_ventas'] ?? 0)}',
+                  Icons.today,
+                  Colors.blue,
                 ),
-              ),
-            ),
-          ),
+                _buildMetricCard(
+                  'Ventas Este Mes',
+                  '\$ ${currency.format(mes['ventas_mes'] ?? 0)}',
+                  Icons.calendar_month,
+                  Colors.green,
+                ),
+                _buildMetricCard(
+                  'Gastos Este Mes',
+                  '\$ ${currency.format(mes['gastos_mes'] ?? 0)}',
+                  Icons.money_off,
+                  Colors.red,
+                ),
+                _buildMetricCard(
+                  'Utilidad Estimada',
+                  '\$ ${currency.format(mes['utilidad_estimada'] ?? 0)}',
+                  Icons.trending_up,
+                  Colors.teal,
+                ),
+                _buildMetricCard(
+                  'Deuda Mayoristas',
+                  '\$ ${currency.format(mes['deuda_pendiente'] ?? 0)}',
+                  Icons.warning_amber,
+                  Colors.orange,
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 32),
         Text('Top 5 Productos del mes', style: Theme.of(context).textTheme.titleLarge),

@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/app_routes.dart';
 import '../../core/constants/app_colors.dart';
@@ -173,7 +176,7 @@ class _ProductTile extends ConsumerWidget {
             ? null
             : () => ref.read(posCartProvider.notifier).addProduct(
                   producto,
-                  cantidad: isCerveza ? 6 : 1,
+                  cantidad: 0,
                 ),
         title: Text(producto.nombre),
         subtitle: Text(
@@ -283,28 +286,130 @@ class _CartPanelState extends ConsumerState<_CartPanel> {
   ) {
     return showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Venta registrada'),
-        content: Text(
-          'Venta ${receipt.ventaId.substring(0, 8)} por ${CurrencyFormatter.cop(receipt.total)}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Column(
+            children: [
+              Icon(
+                Icons.check_circle_outline_rounded,
+                color: Colors.green,
+                size: 64,
+              ),
+              SizedBox(height: 12),
+              Text(
+                '¡Venta Registrada!',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
-          FilledButton.icon(
-            onPressed: () async {
-              await Printing.layoutPdf(
-                onLayout: (_) => PosReceiptPdf.build(receipt),
-              );
-            },
-            icon: const Icon(Icons.print),
-            label: const Text('Imprimir comprobante'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                CurrencyFormatter.cop(receipt.total),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.greenAccent,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                '¿Cómo deseas entregar el comprobante?',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf, color: Colors.redAccent),
+                title: const Text('Compartir PDF'),
+                subtitle: const Text('Envía el PDF por WhatsApp'),
+                onTap: () => _shareReceiptPdf(receipt),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.image, color: Colors.blueAccent),
+                title: const Text('Compartir Imagen'),
+                subtitle: const Text('Envía como foto por WhatsApp'),
+                onTap: () => _shareReceiptImage(receipt),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.print, color: Colors.tealAccent),
+                title: const Text('Imprimir'),
+                subtitle: const Text('Imprimir comprobante físico'),
+                onTap: () async {
+                  await Printing.layoutPdf(
+                    onLayout: (_) => PosReceiptPdf.build(receipt),
+                  );
+                },
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Finalizar'),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  Future<void> _shareReceiptPdf(PosReceiptData receipt) async {
+    try {
+      final pdfBytes = await PosReceiptPdf.build(receipt);
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/comprobante_${receipt.ventaId.substring(0, 8)}.pdf');
+      await file.writeAsBytes(pdfBytes);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Comprobante de Venta por ${CurrencyFormatter.cop(receipt.total)}',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al compartir PDF: $e')),
+      );
+    }
+  }
+
+  Future<void> _shareReceiptImage(PosReceiptData receipt) async {
+    try {
+      final pdfBytes = await PosReceiptPdf.build(receipt);
+      final images = Printing.raster(pdfBytes, pages: [0], dpi: 200);
+      await for (final image in images) {
+        final pngBytes = await image.toPng();
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/comprobante_${receipt.ventaId.substring(0, 8)}.png');
+        await file.writeAsBytes(pngBytes);
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: 'Comprobante de Venta por ${CurrencyFormatter.cop(receipt.total)}',
+        );
+        break;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al compartir Imagen: $e')),
+      );
+    }
   }
 
   @override

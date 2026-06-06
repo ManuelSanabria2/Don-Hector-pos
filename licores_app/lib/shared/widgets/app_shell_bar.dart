@@ -22,19 +22,18 @@ class AppShellBar extends StatelessWidget implements PreferredSizeWidget {
           children: [
             Text(
               'DON',
-              style: GoogleFonts.dmMono(
-                fontSize: 11,
-                fontWeight: FontWeight.w300,
+              style: GoogleFonts.firaMono(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
                 letterSpacing: 2.5,
                 color: AppColors.blancoD,
               ),
             ),
             Text(
               'Héctor',
-              style: GoogleFonts.cormorantGaramond(
-                fontSize: 36,
-                fontWeight: FontWeight.w300,
-                fontStyle: FontStyle.italic,
+              style: GoogleFonts.libreBaskerville(
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
                 color: AppColors.blanco,
                 height: 0.95,
               ),
