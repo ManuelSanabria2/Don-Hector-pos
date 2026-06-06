@@ -20,13 +20,32 @@ import 'features/mayoristas/cliente_form_screen.dart';
 import 'features/splash/video_splash_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+  
+  try {
+    print('Starting app initialization...');
+    await dotenv.load(fileName: '.env');
+    print('Dotenv loaded successfully. Keys: ${dotenv.env.keys}');
+  } catch (e) {
+    print('Failed to load .env: $e');
+  }
+
   await initializeDateFormatting('es', null);
 
   final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  print('Supabase URL: $supabaseUrl');
+  
+  try {
+    if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
+      await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+      print('Supabase initialized successfully.');
+    } else {
+      print('Supabase credentials are empty!');
+    }
+  } catch (e) {
+    print('Failed to initialize Supabase: $e');
+  }
 
   runApp(const ProviderScope(child: LicoresApp()));
 }

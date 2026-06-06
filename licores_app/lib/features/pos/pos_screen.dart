@@ -19,7 +19,9 @@ import '../../data/repositories/mayoristas_repository.dart';
 import '../inventario/inventario_providers.dart';
 import '../mayoristas/mayoristas_providers.dart';
 import 'pos_providers.dart';
+import 'widgets/assistant_aura_animation.dart';
 import 'pos_receipt_pdf.dart';
+import 'pos_asistente_provider.dart';
 
 class PosScreen extends ConsumerWidget {
   const PosScreen({super.key});
@@ -65,6 +67,7 @@ class PosScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      backgroundColor: AppColors.superficie, // Fondo sólido
       builder: (context) => const FractionallySizedBox(
         heightFactor: 0.9,
         child: Padding(padding: EdgeInsets.all(16), child: _CartPanel()),
@@ -103,6 +106,7 @@ class _ProductSearchPanel extends ConsumerWidget {
               onPressed: () => _scanBarcode(context, ref),
               icon: const Icon(Icons.qr_code_scanner),
             ),
+            const _AsistenteVozButton(),
           ],
         ),
         const SizedBox(height: 16),
@@ -491,6 +495,7 @@ class _CartPanelState extends ConsumerState<_CartPanel> {
           DropdownButtonFormField<MetodoPago>(
             initialValue: cart.metodoPago,
             decoration: const InputDecoration(labelText: 'Metodo de pago'),
+            dropdownColor: AppColors.superficie,
             items: const [
               DropdownMenuItem(value: MetodoPago.efectivo, child: Text('Efectivo')),
               DropdownMenuItem(value: MetodoPago.nequi, child: Text('Nequi')),
@@ -781,6 +786,196 @@ class _SaldoPendienteInfo extends ConsumerWidget {
               color: selected.tieneCobroPendiente ? AppColors.ambar : AppColors.verde,
               fontWeight: FontWeight.bold,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AsistenteVozButton extends ConsumerWidget {
+  const _AsistenteVozButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(posAsistenteProvider);
+
+    return IconButton(
+      tooltip: 'Asistente de voz',
+      onPressed: () {
+        showAssistantDialog(context);
+      },
+      icon: Icon(
+        Icons.mic,
+        color: state.isListening ? Colors.red : AppColors.blanco,
+      ),
+    );
+  }
+}
+
+class _AsistenteVozSheet extends ConsumerWidget {
+  const _AsistenteVozSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(posAsistenteProvider);
+    final notifier = ref.read(posAsistenteProvider.notifier);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: const BoxDecoration(
+        color: AppColors.superficie,
+        border: Border(top: BorderSide(color: AppColors.borde, width: 1.5)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'ASISTENTE DE VOZ POS',
+            style: TextStyle(
+              color: AppColors.blanco,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Mic Button
+          GestureDetector(
+            onTap: () {
+              if (state.isListening) {
+                notifier.stopListening();
+              } else {
+                notifier.startListening();
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: state.isListening 
+                    ? Colors.red.withOpacity(0.2) 
+                    : AppColors.ambar.withOpacity(0.1),
+                border: Border.all(
+                  color: state.isListening ? Colors.red : AppColors.ambar,
+                  width: 2.0,
+                ),
+              ),
+              child: Icon(
+                state.isListening ? Icons.mic : Icons.mic_none,
+                color: state.isListening ? Colors.red : AppColors.ambar,
+                size: 40,
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Listening status
+          Text(
+            state.isListening 
+                ? 'Escuchando tu voz...' 
+                : (state.isProcessing ? 'Procesando con IA...' : 'Toca el micrófono para hablar'),
+            style: TextStyle(
+              color: state.isListening ? Colors.red : AppColors.blancoD,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // User input transcription
+          if (state.textSpoken.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.superficie2,
+                border: Border.all(color: AppColors.borde),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.person, color: AppColors.blancoD, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '"${state.textSpoken}"',
+                      style: const TextStyle(
+                        color: AppColors.blanco,
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          
+          // AI spoken response
+          if (state.aiResponse.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.crema,
+                border: Border.all(color: AppColors.borde),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.assistant, color: AppColors.ambar, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      state.aiResponse,
+                      style: const TextStyle(
+                        color: AppColors.blanco,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
+          if (state.hasError) ...[
+            const SizedBox(height: 16),
+            Text(
+              state.errorMessage,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ],
+          
+          const SizedBox(height: 24),
+          
+          // Quick actions
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  notifier.stopSpeaking();
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.close),
+                label: const Text('Cerrar'),
+              ),
+              FilledButton.icon(
+                onPressed: () {
+                  ref.read(posCartProvider.notifier).clear();
+                  notifier.speakText('Carrito del POS limpiado.');
+                },
+                icon: const Icon(Icons.delete_sweep),
+                label: const Text('Limpiar POS'),
+              ),
+            ],
           ),
         ],
       ),

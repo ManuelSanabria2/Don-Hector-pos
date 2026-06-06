@@ -156,9 +156,13 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: const TextStyle(color: AppColors.blanco, fontSize: 16, fontWeight: FontWeight.bold),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      style: const TextStyle(color: AppColors.blanco, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
@@ -220,8 +224,11 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 16,
+          runSpacing: 16,
           children: [
             Text(
               'Contabilidad',
@@ -232,6 +239,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
             ),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 OutlinedButton.icon(
                   onPressed: () {
@@ -338,11 +346,13 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              _selectedDate.day == DateTime.now().day && _selectedDate.month == DateTime.now().month && _selectedDate.year == DateTime.now().year 
-                ? 'Facturas del día' 
-                : 'Facturas del ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
-              style: Theme.of(context).textTheme.titleLarge,
+            Expanded(
+              child: Text(
+                _selectedDate.day == DateTime.now().day && _selectedDate.month == DateTime.now().month && _selectedDate.year == DateTime.now().year 
+                  ? 'Facturas del día' 
+                  : 'Facturas del ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             TextButton.icon(
               icon: const Icon(Icons.calendar_month),

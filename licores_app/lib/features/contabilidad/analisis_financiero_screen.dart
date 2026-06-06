@@ -210,8 +210,12 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
                     ),
                     gridData: FlGridData(
                       show: true,
-                      drawVerticalLine: false,
+                      drawVerticalLine: true,
                       getDrawingHorizontalLine: (value) => const FlLine(
+                        color: AppColors.borde,
+                        strokeWidth: 1,
+                      ),
+                      getDrawingVerticalLine: (value) => const FlLine(
                         color: AppColors.borde,
                         strokeWidth: 1,
                       ),
@@ -328,8 +332,12 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
                       ),
                       gridData: FlGridData(
                         show: true,
-                        drawVerticalLine: false,
+                        drawVerticalLine: true,
                         getDrawingHorizontalLine: (value) => const FlLine(
+                          color: AppColors.borde,
+                          strokeWidth: 1,
+                        ),
+                        getDrawingVerticalLine: (value) => const FlLine(
                           color: AppColors.borde,
                           strokeWidth: 1,
                         ),
@@ -515,8 +523,12 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
                       ),
                       gridData: FlGridData(
                         show: true,
-                        drawVerticalLine: false,
+                        drawVerticalLine: true,
                         getDrawingHorizontalLine: (value) => const FlLine(
+                          color: AppColors.borde,
+                          strokeWidth: 1,
+                        ),
+                        getDrawingVerticalLine: (value) => const FlLine(
                           color: AppColors.borde,
                           strokeWidth: 1,
                         ),

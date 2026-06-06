@@ -11,7 +11,7 @@ abstract final class AppTheme {
       primary: AppColors.ambar,
       secondary: AppColors.verde,
       surface: AppColors.superficie,
-      onPrimary: Color(0xFF0F0B08),
+      onPrimary: Color(0xFF16181A),
       onSurface: AppColors.blanco,
     ),
     dividerColor: AppColors.borde,
@@ -48,7 +48,7 @@ abstract final class AppTheme {
         fontSize: 14,
         color: AppColors.blanco,
       ),
-      // Valores numéricos y texto de cuerpo con Outfit/Plus Jakarta Sans para legibilidad táctil
+      // Valores numéricos y texto de cuerpo con Outfit para legibilidad táctil
       bodyLarge: GoogleFonts.outfit(
         fontWeight: FontWeight.normal,
         fontSize: 16,
@@ -89,12 +89,12 @@ abstract final class AppTheme {
       fillColor: AppColors.superficie2,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       enabledBorder: OutlineInputBorder(
-        borderSide: const BorderSide(color: AppColors.borde, width: 1.2),
-        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(14),
       ),
       focusedBorder: OutlineInputBorder(
-        borderSide: const BorderSide(color: AppColors.ambar, width: 1.6),
-        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.ambar, width: 1.0),
+        borderRadius: BorderRadius.circular(14),
       ),
       hintStyle: GoogleFonts.outfit(color: AppColors.gris, fontSize: 15),
       labelStyle: GoogleFonts.outfit(
@@ -105,25 +105,28 @@ abstract final class AppTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.ambar,
-        foregroundColor: const Color(0xFF0F0B08),
+        foregroundColor: const Color(0xFF24282F),
+        elevation: 0,
+        shadowColor: Colors.transparent,
         textStyle: GoogleFonts.outfit(
           fontSize: 15,
           fontWeight: FontWeight.bold,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        elevation: 0,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.blanco,
-        side: const BorderSide(color: AppColors.borde, width: 1.2),
+        side: const BorderSide(color: AppColors.borde, width: 1.0),
         textStyle: GoogleFonts.outfit(
           fontSize: 15,
           fontWeight: FontWeight.bold,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
       ),
     ),
@@ -132,8 +135,19 @@ abstract final class AppTheme {
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.borde, width: 1.2),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide.none,
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        selectedBackgroundColor: AppColors.ambar.withOpacity(0.2),
+        selectedForegroundColor: AppColors.ambar,
+        foregroundColor: AppColors.blancoD,
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
       ),
     ),
     appBarTheme: AppBarTheme(
@@ -142,7 +156,7 @@ abstract final class AppTheme {
       titleTextStyle: GoogleFonts.lora(
         fontStyle: FontStyle.normal,
         fontWeight: FontWeight.bold,
-        fontSize: 20,
+        fontSize: 22,
         color: AppColors.blanco,
       ),
       iconTheme: const IconThemeData(color: AppColors.blanco, size: 24),

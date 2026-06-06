@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +12,7 @@ import '../inventario/inventario_providers.dart';
 import '../inventario/inventario_screen.dart';
 import '../mayoristas/mayoristas_screen.dart';
 import '../pos/pos_screen.dart';
+import '../pos/widgets/assistant_aura_animation.dart';
 
 final homeTabIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -36,11 +38,18 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppShellBar(
         title: AppStrings.businessName,
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => showAssistantDialog(context),
+        backgroundColor: colors.primary,
+        child: const Icon(Icons.graphic_eq, color: Colors.white),
+      ),
       body: Row(
         children: [
           if (isDesktop)
             NavigationRail(
               selectedIndex: selectedIndex,
+              useIndicator: false,
+              indicatorColor: Colors.transparent,
               onDestinationSelected: (index) {
                 ref.read(homeTabIndexProvider.notifier).state = index;
               },
@@ -199,12 +208,17 @@ class _DashboardView extends ConsumerWidget {
               final publico = (resumen['ventas_publico'] as num?)?.toDouble() ?? 0.0;
               final mayorista = (resumen['ventas_mayorista'] as num?)?.toDouble() ?? 0.0;
 
-              return Container(
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  border: Border.all(color: colors.primary),
-                ),
-                padding: const EdgeInsets.all(24),
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -254,22 +268,31 @@ class _DashboardView extends ConsumerWidget {
                     ),
                   ],
                 ),
-              );
+              ),
+            ),
+          );
             },
           ),
           const SizedBox(height: 24),
 
-          InkWell(
-            onTap: () {
-              ref.read(homeTabIndexProvider.notifier).state = 2;
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Ink(
-              decoration: BoxDecoration(
-                color: colors.surface,
-                border: Border.all(color: colors.primary),
-              ),
-              padding: const EdgeInsets.all(20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    ref.read(homeTabIndexProvider.notifier).state = 2;
+                  },
+                  borderRadius: BorderRadius.circular(24),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
                   Container(
@@ -310,6 +333,9 @@ class _DashboardView extends ConsumerWidget {
               ),
             ),
           ),
+        ),
+      ),
+    ),
         ],
       ),
     );
