@@ -26,7 +26,6 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   late final TextEditingController _costoController;
   late final TextEditingController _stockActualController;
   late final TextEditingController _stockMinimoController;
-  late final TextEditingController _agregarStockController;
   late final TextEditingController _barcodeController;
   String? _categoriaId;
   bool _activo = true;
@@ -59,7 +58,6 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     _stockMinimoController = TextEditingController(
       text: producto?.stockMinimo.toString() ?? '5',
     );
-    _agregarStockController = TextEditingController(text: '0');
     _barcodeController = TextEditingController(
       text: producto?.codigoBarras ?? '',
     );
@@ -75,7 +73,6 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     _costoController.dispose();
     _stockActualController.dispose();
     _stockMinimoController.dispose();
-    _agregarStockController.dispose();
     _barcodeController.dispose();
     super.dispose();
   }
@@ -93,8 +90,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     setState(() => _saving = true);
 
     final isEditing = _producto != null;
-    final extraStock = isEditing ? (int.tryParse(_agregarStockController.text) ?? 0) : 0;
-    final initialStock = !isEditing ? (int.tryParse(_stockActualController.text) ?? 0) : 0;
+    final nuevoStock = int.tryParse(_stockActualController.text) ?? 0;
 
     final producto = Producto(
       id: _producto?.id ?? '',
@@ -117,20 +113,26 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
       final repo = ref.read(inventarioRepositoryProvider);
       final productoId = await repo.upsertProducto(producto);
       
-      if (isEditing && extraStock > 0) {
-        await repo.ajustarStock(
-          productoId: productoId,
-          cantidad: extraStock,
-          tipo: 'entrada',
-          motivo: 'Ajuste manual (entrada por edicion)',
-        );
-      } else if (!isEditing && initialStock > 0) {
-        await repo.ajustarStock(
-          productoId: productoId,
-          cantidad: initialStock,
-          tipo: 'entrada',
-          motivo: 'Stock inicial',
-        );
+      if (isEditing) {
+        final stockAnterior = _producto!.stockActual;
+        final diff = nuevoStock - stockAnterior;
+        if (diff != 0) {
+          await repo.ajustarStock(
+            productoId: productoId,
+            cantidad: diff.abs(),
+            tipo: diff > 0 ? 'entrada' : 'salida',
+            motivo: 'Ajuste manual por edicion',
+          );
+        }
+      } else {
+        if (nuevoStock > 0) {
+          await repo.ajustarStock(
+            productoId: productoId,
+            cantidad: nuevoStock,
+            tipo: 'entrada',
+            motivo: 'Stock inicial',
+          );
+        }
       }
 
       ref.invalidate(inventarioProductosProvider);
@@ -215,30 +217,15 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
             const SizedBox(height: 12),
             _MoneyField(controller: _costoController, label: 'Costo'),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _IntegerField(
-                    controller: _stockActualController,
-                    label: 'Stock actual',
-                    enabled: _producto == null,
-                  ),
-                ),
-                if (_producto != null) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _IntegerField(
-                      controller: _agregarStockController,
-                      label: 'Agregar stock',
-                      validator: (value) {
-                        final val = int.tryParse(value ?? '') ?? 0;
-                        if (val < 0) return 'Debe ser >= 0';
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
-              ],
+            _IntegerField(
+              controller: _stockActualController,
+              label: 'Stock actual',
+              enabled: true,
+              validator: (value) {
+                final val = int.tryParse(value ?? '') ?? 0;
+                if (val < 0) return 'Debe ser >= 0';
+                return null;
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(
