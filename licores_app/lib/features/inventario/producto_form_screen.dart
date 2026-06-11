@@ -92,10 +92,9 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
 
     setState(() => _saving = true);
 
-    final extraStock = _producto != null ? (int.tryParse(_agregarStockController.text) ?? 0) : 0;
-    final stockActual = _producto != null
-        ? (_producto!.stockActual + extraStock)
-        : int.parse(_stockActualController.text);
+    final isEditing = _producto != null;
+    final extraStock = isEditing ? (int.tryParse(_agregarStockController.text) ?? 0) : 0;
+    final initialStock = !isEditing ? (int.tryParse(_stockActualController.text) ?? 0) : 0;
 
     final producto = Producto(
       id: _producto?.id ?? '',
@@ -106,7 +105,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
         _precioMayoristaController.text,
       ),
       costo: CurrencyFormatter.parseCop(_costoController.text),
-      stockActual: stockActual,
+      stockActual: _producto?.stockActual ?? 0,
       stockMinimo: _producto?.stockMinimo ?? 5,
       codigoBarras: _barcodeController.text.trim().isEmpty
           ? null
@@ -115,7 +114,25 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     );
 
     try {
-      await ref.read(inventarioRepositoryProvider).upsertProducto(producto);
+      final repo = ref.read(inventarioRepositoryProvider);
+      final productoId = await repo.upsertProducto(producto);
+      
+      if (isEditing && extraStock > 0) {
+        await repo.ajustarStock(
+          productoId: productoId,
+          cantidad: extraStock,
+          tipo: 'entrada',
+          motivo: 'Ajuste manual (entrada por edicion)',
+        );
+      } else if (!isEditing && initialStock > 0) {
+        await repo.ajustarStock(
+          productoId: productoId,
+          cantidad: initialStock,
+          tipo: 'entrada',
+          motivo: 'Stock inicial',
+        );
+      }
+
       ref.invalidate(inventarioProductosProvider);
       ref.invalidate(stockBajoProvider);
 

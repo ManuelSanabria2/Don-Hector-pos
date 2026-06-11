@@ -48,13 +48,37 @@ class InventarioRepository {
     return row == null ? null : Producto.fromJson(row);
   }
 
-  Future<void> upsertProducto(Producto p) async {
+  Future<String> upsertProducto(Producto p) async {
     final values = _withoutNulls(p.toJson());
+    
+    // El stock_actual se maneja exclusivamente a traves de la RPC ajustar_stock para mantener la auditoria
+    values.remove('stock_actual');
+
     if ((values['id'] as String?)?.isEmpty ?? false) {
       values.remove('id');
     }
 
-    await _client.from('productos').upsert(values);
+    final response = await _client
+        .from('productos')
+        .upsert(values)
+        .select('id')
+        .single();
+    
+    return response['id'] as String;
+  }
+
+  Future<void> ajustarStock({
+    required String productoId,
+    required int cantidad,
+    required String tipo,
+    required String motivo,
+  }) async {
+    await _client.rpc('ajustar_stock', params: {
+      'p_producto_id': productoId,
+      'p_cantidad': cantidad,
+      'p_tipo': tipo,
+      'p_motivo': motivo,
+    });
   }
 
   Future<void> toggleActivo(String id, bool activo) async {

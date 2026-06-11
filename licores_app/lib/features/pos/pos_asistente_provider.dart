@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../core/config/environment.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -274,7 +274,7 @@ class PosAsistenteController extends StateNotifier<AsistenteState> {
     List<Producto> productos,
     List<ClienteConCuenta> clientes,
   ) async {
-    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+    final apiKey = Environment.geminiApiKey;
     if (apiKey.isEmpty) {
       // Return a simulated response if no api key to avoid crashes
       return _generateSimulatedResponse(speechText, productos, clientes);

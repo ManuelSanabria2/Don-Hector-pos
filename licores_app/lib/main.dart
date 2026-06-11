@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/config/environment.dart';
 import 'core/constants/app_routes.dart';
 import 'core/constants/app_strings.dart';
 import 'core/theme/app_theme.dart';
@@ -18,21 +18,15 @@ import 'features/inventario/producto_form_screen.dart';
 import 'features/mayoristas/cliente_detail_screen.dart';
 import 'features/mayoristas/cliente_form_screen.dart';
 import 'features/splash/video_splash_screen.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  try {
-    print('Starting app initialization...');
-    await dotenv.load(fileName: '.env');
-    print('Dotenv loaded successfully. Keys: ${dotenv.env.keys}');
-  } catch (e) {
-    print('Failed to load .env: $e');
-  }
-
+  print('Starting app initialization...');
   await initializeDateFormatting('es', null);
 
-  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
-  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  final supabaseUrl = Environment.supabaseUrl;
+  final supabaseAnonKey = Environment.supabaseAnonKey;
 
   print('Supabase URL: $supabaseUrl');
   
