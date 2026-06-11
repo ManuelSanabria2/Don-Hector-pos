@@ -19,10 +19,9 @@ final gastosDelMesProvider = FutureProvider<List<Gasto>>((ref) async {
   final startOfMonth = DateTime(now.year, now.month, 1);
   final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
 
-  final gastos = await repo.getGastos(desde: startOfMonth, hasta: endOfMonth);
-
-  if (selectedCat != null) {
-    return gastos.where((g) => g.categoriaId == selectedCat).toList();
-  }
-  return gastos;
+  return repo.getGastos(
+    desde: startOfMonth,
+    hasta: endOfMonth,
+    categoriaId: selectedCat,
+  );
 });

@@ -51,7 +51,7 @@ class MayoristasRepository {
           producto_id,
           cantidad,
           precio_unitario,
-          productos (nombre, categoria_id),
+          productos (nombre, categorias(nombre)),
           ventas!inner (
             fecha,
             cliente_id

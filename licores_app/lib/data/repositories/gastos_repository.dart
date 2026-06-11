@@ -22,7 +22,11 @@ class GastosRepository {
     return rows.map(CategoriaGasto.fromJson).toList();
   }
 
-  Future<List<Gasto>> getGastos({DateTime? desde, DateTime? hasta}) async {
+  Future<List<Gasto>> getGastos({
+    DateTime? desde,
+    DateTime? hasta,
+    String? categoriaId,
+  }) async {
     var query = _client.from('gastos').select();
 
     if (desde != null) {
@@ -31,6 +35,10 @@ class GastosRepository {
 
     if (hasta != null) {
       query = query.lte('fecha', _dateOnly(hasta));
+    }
+
+    if (categoriaId != null) {
+      query = query.eq('categoria_id', categoriaId);
     }
 
     final rows = await query.order('fecha', ascending: false);

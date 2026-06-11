@@ -118,7 +118,8 @@ class _ProductosTab extends StatelessWidget {
         final producto = item['productos'] as Map<String, dynamic>?;
         final fecha = venta?['fecha'] as String?;
         final nombreProducto = producto?['nombre'] as String? ?? 'Desconocido';
-        final categoria = producto?['categoria_id'] as String?;
+        final categoriaData = producto?['categorias'] as Map<String, dynamic>?;
+        final categoriaNombre = categoriaData?['nombre'] as String? ?? 'Sin categoría';
         final cantidad = item['cantidad'] as int? ?? 0;
         final precioUnitario = item['precio_unitario'] as num? ?? 0;
 
@@ -134,7 +135,7 @@ class _ProductosTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Categoria: ${categoria ?? 'Sin categoria'}',
+                  'Categoría: $categoriaNombre',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppColors.blancoD,
                       ),
