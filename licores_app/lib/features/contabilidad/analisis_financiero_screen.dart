@@ -87,7 +87,6 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
     final currency = NumberFormat('#,##0.00');
 
     final hoy = resumenHoy.value ?? {};
-    final mes = metricasMes.value ?? {};
     final dias7 = ventas7Dias.value ?? [];
     final gastos = gastosAsync.value ?? [];
     final top = topProductos.value ?? [];

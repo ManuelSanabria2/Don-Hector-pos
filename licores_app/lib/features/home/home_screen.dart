@@ -8,7 +8,6 @@ import '../../shared/widgets/app_shell_bar.dart';
 import '../contabilidad/contabilidad_providers.dart';
 import '../contabilidad/contabilidad_screen.dart';
 import '../gastos/gastos_screen.dart';
-import '../inventario/inventario_providers.dart';
 import '../inventario/inventario_screen.dart';
 import '../mayoristas/mayoristas_screen.dart';
 import '../pos/pos_screen.dart';

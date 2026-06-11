@@ -7,12 +7,9 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 
 import '../../data/models/carrito_item.dart';
-import '../../data/models/cliente_mayorista.dart';
 import '../../data/models/producto.dart';
 import '../../data/models/venta_enums.dart';
 import '../../data/repositories/inventario_repository.dart';
-import '../../data/repositories/mayoristas_repository.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'pos_providers.dart';
 import '../mayoristas/mayoristas_providers.dart';
 

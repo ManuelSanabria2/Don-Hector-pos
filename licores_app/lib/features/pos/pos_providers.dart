@@ -1,11 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/carrito_item.dart';
-import '../../data/models/cliente_mayorista.dart';
 import '../../data/models/producto.dart';
 import '../../data/models/venta_enums.dart';
 import '../../data/repositories/inventario_repository.dart';
-import '../../data/repositories/mayoristas_repository.dart';
 
 import '../mayoristas/mayoristas_providers.dart';
 

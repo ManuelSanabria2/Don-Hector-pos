@@ -30,11 +30,11 @@ class GastosRepository {
     var query = _client.from('gastos').select();
 
     if (desde != null) {
-      query = query.gte('fecha', _dateOnly(desde));
+      query = query.gte('fecha', desde.toUtc().toIso8601String());
     }
 
     if (hasta != null) {
-      query = query.lte('fecha', _dateOnly(hasta));
+      query = query.lte('fecha', hasta.toUtc().toIso8601String());
     }
 
     if (categoriaId != null) {
@@ -56,9 +56,7 @@ class GastosRepository {
   }
 }
 
-String _dateOnly(DateTime value) {
-  return value.toIso8601String().split('T').first;
-}
+
 
 Map<String, dynamic> _withoutNulls(Map<String, dynamic> values) {
   return Map.fromEntries(values.entries.where((entry) => entry.value != null));

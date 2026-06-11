@@ -20,8 +20,8 @@ class ContabilidadRepository {
         .from('ventas')
         .select('tipo,total')
         .eq('estado', 'completada')
-        .gte('fecha', start.toIso8601String())
-        .lt('fecha', end.toIso8601String());
+        .gte('fecha', start.toUtc().toIso8601String())
+        .lt('fecha', end.toUtc().toIso8601String());
 
     num totalVentas = 0;
     num ventasPublico = 0;
@@ -74,8 +74,8 @@ class ContabilidadRepository {
     final rows = await _client
         .from('gastos')
         .select('monto')
-        .gte('fecha', start.toIso8601String())
-        .lte('fecha', end.toIso8601String());
+        .gte('fecha', start.toUtc().toIso8601String())
+        .lte('fecha', end.toUtc().toIso8601String());
     return rows.fold<num>(0, (sum, row) => sum + ((row['monto'] as num?) ?? 0));
   }
 
@@ -84,8 +84,8 @@ class ContabilidadRepository {
         .from('ventas')
         .select('total')
         .eq('estado', 'completada')
-        .gte('fecha', start.toIso8601String())
-        .lte('fecha', end.toIso8601String());
+        .gte('fecha', start.toUtc().toIso8601String())
+        .lte('fecha', end.toUtc().toIso8601String());
     return rows.fold<num>(0, (sum, row) => sum + ((row['total'] as num?) ?? 0));
   }
 
@@ -93,8 +93,8 @@ class ContabilidadRepository {
     final result = await _client.rpc(
       'cogs_rango',
       params: {
-        'p_start': start.toIso8601String(),
-        'p_end': end.toIso8601String(),
+        'p_start': start.toUtc().toIso8601String(),
+        'p_end': end.toUtc().toIso8601String(),
       },
     );
     return (result as num?) ?? 0;
@@ -119,8 +119,8 @@ class ContabilidadRepository {
           notas
         ''')
         .eq('estado', 'completada')
-        .gte('fecha', start.toIso8601String())
-        .lt('fecha', end.toIso8601String())
+        .gte('fecha', start.toUtc().toIso8601String())
+        .lt('fecha', end.toUtc().toIso8601String())
         .order('fecha', ascending: false);
 
     return rows.map((row) => Map<String, dynamic>.from(row)).toList();

@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -173,30 +172,6 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
     );
   }
 
-  Widget _buildPieLegend(String title, String value, Color color) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          color: color,
-          margin: const EdgeInsets.only(top: 4),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(color: AppColors.blancoD, fontSize: 12)),
-              Text(value, style: const TextStyle(color: AppColors.blanco, fontSize: 13, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final resumenHoy = ref.watch(resumenHoyProvider);
@@ -215,11 +190,8 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
 
     final hoy = resumenHoy.value ?? {};
     final mes = metricasMes.value ?? {};
-    final dias7 = ventas7Dias.value ?? [];
     final top = topProductos.value ?? [];
     final ventasHoyList = ventasHoy.value ?? [];
-    
-    final isDesktop = MediaQuery.of(context).size.width >= 800;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -441,8 +413,6 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
               itemBuilder: (context, i) {
                 final venta = ventasHoyList[i];
                 final fecha = venta['fecha'] as String?;
-                final subtotal = venta['subtotal'] as num? ?? 0;
-                final descuento = venta['descuento'] as num? ?? 0;
                 final total = venta['total'] as num? ?? 0;
                 final metodoPago = venta['metodo_pago'] as String? ?? '';
                 final tipo = venta['tipo'] as String? ?? '';

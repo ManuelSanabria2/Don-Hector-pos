@@ -73,6 +73,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
       ref.invalidate(resumenHoyProvider);
       ref.invalidate(metricasMesProvider);
       ref.invalidate(ventasUltimos7DiasProvider);
+      ref.invalidate(ventasPorDiaProvider);
 
       if (!mounted) return;
       await _showSuccessDialog(context, receipt);
