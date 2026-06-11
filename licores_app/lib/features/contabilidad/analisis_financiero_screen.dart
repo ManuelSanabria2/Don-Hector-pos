@@ -128,6 +128,94 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // 0. RESUMEN DE HOY Y UTILIDAD DIARIA
+          Card(
+            elevation: 0,
+            color: AppColors.superficie,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.borde, width: 1.5),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Resumen del Día & Utilidad Diaria',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.blanco,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Ventas de Hoy',
+                              style: TextStyle(color: AppColors.blancoD, fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '\$ ${currency.format(hoy['total_ventas'] ?? 0)}',
+                              style: const TextStyle(
+                                color: AppColors.blanco,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${hoy['num_ventas'] ?? 0} transacciones',
+                              style: const TextStyle(color: AppColors.blancoD, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        height: 50,
+                        width: 1.5,
+                        color: AppColors.borde,
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Utilidad Diaria Estimada',
+                              style: TextStyle(color: AppColors.blancoD, fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              // Estimamos la utilidad diaria bruta aplicando el mismo ratio del mes o un valor bruto (Ventas Hoy)
+                              '\$ ${currency.format((hoy['total_ventas'] ?? 0) * 0.35)}', // Estimación estándar del 35% de margen bruto
+                              style: const TextStyle(
+                                color: AppColors.verde,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Margen estimado: 35%',
+                              style: TextStyle(color: AppColors.blancoD, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // 1. VENTAS ÚLTIMOS 7 DÍAS
           _buildCardContainer(
             title: 'Ventas últimos 7 días',

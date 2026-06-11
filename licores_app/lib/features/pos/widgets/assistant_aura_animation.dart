@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
@@ -9,7 +10,7 @@ void showAssistantDialog(BuildContext context) {
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Asistente',
-    barrierColor: Colors.black87,
+    barrierColor: Colors.black87, // Unificado a black87 como el carrito
     transitionDuration: const Duration(milliseconds: 300),
     pageBuilder: (context, anim1, anim2) {
       return const AssistantAuraDialog();
@@ -17,7 +18,10 @@ void showAssistantDialog(BuildContext context) {
     transitionBuilder: (context, anim1, anim2, child) {
       return FadeTransition(
         opacity: anim1,
-        child: child,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), // Unificado a 20px de blur como el carrito
+          child: child,
+        ),
       );
     },
   );

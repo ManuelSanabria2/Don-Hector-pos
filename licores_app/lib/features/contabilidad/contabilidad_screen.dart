@@ -242,6 +242,44 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
               runSpacing: 8,
               children: [
                 OutlinedButton.icon(
+                  onPressed: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: ColorScheme.dark(
+                              primary: AppColors.ambar,
+                              onPrimary: Colors.black,
+                              surface: const Color(0xFA131310), // 98% opacidad oscura
+                              onSurface: AppColors.blanco,
+                            ),
+                            dialogBackgroundColor: const Color(0xFA131310), // Fondo de ventana oscuro
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (date != null) {
+                      setState(() {
+                        _selectedDate = date;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.date_range),
+                  label: Text(
+                    _selectedDate.day == DateTime.now().day && _selectedDate.month == DateTime.now().month && _selectedDate.year == DateTime.now().year
+                        ? 'Fecha: Hoy'
+                        : 'Fecha: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+                OutlinedButton.icon(
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -281,8 +319,10 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
               childAspectRatio: constraints.maxWidth >= 900 ? 2.2 : 2.5,
               children: [
                 _buildMetricCard(
-                  'Ventas Hoy (${hoy['num_ventas'] ?? 0} txs)',
-                  '\$ ${currency.format(hoy['total_ventas'] ?? 0)}',
+                  _selectedDate.day == DateTime.now().day && _selectedDate.month == DateTime.now().month && _selectedDate.year == DateTime.now().year
+                      ? 'Ventas Hoy (${hoy['num_ventas'] ?? 0} txs)'
+                      : 'Ventas del Día (${ventasHoyList.length} txs)',
+                  '\$ ${currency.format(_selectedDate.day == DateTime.now().day && _selectedDate.month == DateTime.now().month && _selectedDate.year == DateTime.now().year ? (hoy['total_ventas'] ?? 0) : ventasHoyList.fold<num>(0, (sum, v) => sum + (v['total'] as num? ?? 0)))}',
                   Icons.today,
                   Colors.blue,
                 ),
@@ -363,6 +403,20 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
                   initialDate: _selectedDate,
                   firstDate: DateTime(2020),
                   lastDate: DateTime.now(),
+                  builder: (context, child) {
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: ColorScheme.dark(
+                          primary: AppColors.ambar,
+                          onPrimary: Colors.black,
+                          surface: const Color(0xFA131310), // 98% opacidad oscura
+                          onSurface: AppColors.blanco,
+                        ),
+                        dialogBackgroundColor: const Color(0xFA131310), // Fondo de ventana oscuro
+                      ),
+                      child: child!,
+                    );
+                  },
                 );
                 if (date != null) {
                   setState(() {

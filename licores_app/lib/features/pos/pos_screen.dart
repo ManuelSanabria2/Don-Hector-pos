@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -67,10 +68,26 @@ class PosScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppColors.superficie, // Fondo sólido
-      builder: (context) => const FractionallySizedBox(
-        heightFactor: 0.9,
-        child: Padding(padding: EdgeInsets.all(16), child: _CartPanel()),
+      backgroundColor: Colors.transparent, // Transparente para aplicar blur
+      barrierColor: Colors.black87, // Capa oscura detrás del modal
+      builder: (context) => ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), // Efecto vidrio líquido
+          child: Container(
+            color: const Color(0xFA131310), // Altísima opacidad (98%) para evitar problemas de contraste y lectura
+            child: const FractionallySizedBox(
+              heightFactor: 0.9,
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: _CartPanel(),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -87,7 +104,7 @@ class _ProductSearchPanel extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'POS',
+          'VENTA',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w400,
                 color: AppColors.blanco,
@@ -180,7 +197,7 @@ class _ProductTile extends ConsumerWidget {
             ? null
             : () => ref.read(posCartProvider.notifier).addProduct(
                   producto,
-                  cantidad: 0,
+                  cantidad: 1,
                 ),
         title: Text(producto.nombre),
         subtitle: Text(
@@ -492,18 +509,67 @@ class _CartPanelState extends ConsumerState<_CartPanel> {
                 return _CartItemTile(item: cart.items[index]);
               },
             ),
-          DropdownButtonFormField<MetodoPago>(
-            initialValue: cart.metodoPago,
-            decoration: const InputDecoration(labelText: 'Metodo de pago'),
-            dropdownColor: AppColors.superficie,
-            items: const [
-              DropdownMenuItem(value: MetodoPago.efectivo, child: Text('Efectivo')),
-              DropdownMenuItem(value: MetodoPago.nequi, child: Text('Nequi')),
-              DropdownMenuItem(value: MetodoPago.transferencia, child: Text('Bancolombia')),
-            ],
-            onChanged: (value) {
-              if (value == null) return;
-              ref.read(posCartProvider.notifier).setMetodoPago(value);
+          Builder(
+            builder: (tileContext) {
+              return ListTile(
+                title: const Text('Metodo de pago'),
+                subtitle: Text(
+                  cart.metodoPago == MetodoPago.efectivo
+                      ? 'Efectivo'
+                      : cart.metodoPago == MetodoPago.nequi
+                          ? 'Nequi'
+                          : 'Bancolombia',
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
+                ),
+                trailing: const Icon(Icons.arrow_drop_down),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: AppColors.borde),
+                ),
+                tileColor: AppColors.superficie2,
+                onTap: () {
+                  final RenderBox button = tileContext.findRenderObject() as RenderBox;
+                  final RenderBox overlay = Navigator.of(tileContext).overlay!.context.findRenderObject() as RenderBox;
+                  
+                  // Obtener la posición global de la esquina superior izquierda del botón
+                  final Offset buttonLocation = button.localToGlobal(Offset.zero, ancestor: overlay);
+                  
+                  // Calcular la posición exacta: justo debajo del botón
+                  final RelativeRect position = RelativeRect.fromLTRB(
+                    buttonLocation.dx, // Izquierda alineada con el botón
+                    buttonLocation.dy + button.size.height, // Inicio en Y sumando la altura del botón
+                    buttonLocation.dx + button.size.width, // Derecha alineada con el botón
+                    buttonLocation.dy + button.size.height + 200, // Altura estimada para que dibuje hacia abajo
+                  );
+                  
+                  showMenu<MetodoPago>(
+                    context: tileContext,
+                    position: position,
+                    color: const Color(0xFA131310), // Mismo término de transparencia y color (98% opacidad) que el carrito
+                    items: [
+                      if (cart.metodoPago != MetodoPago.efectivo)
+                        const PopupMenuItem(
+                          value: MetodoPago.efectivo,
+                          child: Text('Efectivo'),
+                        ),
+                      if (cart.metodoPago != MetodoPago.nequi)
+                        const PopupMenuItem(
+                          value: MetodoPago.nequi,
+                          child: Text('Nequi'),
+                        ),
+                      if (cart.metodoPago != MetodoPago.transferencia)
+                        const PopupMenuItem(
+                          value: MetodoPago.transferencia,
+                          child: Text('Bancolombia'),
+                        ),
+                    ],
+                  ).then((value) {
+                    if (value != null) {
+                      ref.read(posCartProvider.notifier).setMetodoPago(value);
+                    }
+                  });
+                },
+              );
             },
           ),
           const SizedBox(height: 12),

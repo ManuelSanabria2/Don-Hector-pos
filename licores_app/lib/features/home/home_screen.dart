@@ -38,11 +38,13 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppShellBar(
         title: AppStrings.businessName,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showAssistantDialog(context),
-        backgroundColor: colors.primary,
-        child: const Icon(Icons.graphic_eq, color: Colors.white),
-      ),
+      floatingActionButton: selectedIndex == 0
+          ? FloatingActionButton(
+              onPressed: () => showAssistantDialog(context),
+              backgroundColor: colors.primary,
+              child: const Icon(Icons.graphic_eq, color: Colors.white),
+            )
+          : null,
       body: Row(
         children: [
           if (isDesktop)
@@ -73,7 +75,7 @@ class HomeScreen extends ConsumerWidget {
                 NavigationRailDestination(
                   icon: Icon(Icons.point_of_sale_outlined),
                   selectedIcon: Icon(Icons.point_of_sale),
-                  label: Text('POS'),
+                  label: Text('VENTA'),
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.storefront_outlined),
@@ -120,7 +122,7 @@ class HomeScreen extends ConsumerWidget {
                 BottomNavigationBarItem(
                   icon: Icon(Icons.point_of_sale_outlined),
                   activeIcon: Icon(Icons.point_of_sale),
-                  label: 'POS',
+                  label: 'VENTA',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.storefront_outlined),
@@ -211,11 +213,11 @@ class _DashboardView extends ConsumerWidget {
               return ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      color: const Color(0xFA131310), // 98% opacidad oscura
+                      border: Border.all(color: const Color(0xFF262626)),
                       borderRadius: BorderRadius.circular(24),
                     ),
                     padding: const EdgeInsets.all(24),
@@ -278,7 +280,7 @@ class _DashboardView extends ConsumerWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -288,8 +290,8 @@ class _DashboardView extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(24),
                   child: Ink(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      color: const Color(0xFA131310), // 98% opacidad oscura
+                      border: Border.all(color: const Color(0xFF262626)),
                       borderRadius: BorderRadius.circular(24),
                     ),
                     padding: const EdgeInsets.all(20),
@@ -312,7 +314,7 @@ class _DashboardView extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Nueva Venta (POS)',
+                          'Nueva Venta',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: colors.primary,

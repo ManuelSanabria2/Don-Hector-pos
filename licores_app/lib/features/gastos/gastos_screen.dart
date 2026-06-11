@@ -148,9 +148,12 @@ class GastosScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(AppRoutes.gastoForm),
-        child: const Icon(Icons.add),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 60), // Eleva el botón para que quede por encima de la barra de total
+        child: FloatingActionButton(
+          onPressed: () => context.push(AppRoutes.gastoForm),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

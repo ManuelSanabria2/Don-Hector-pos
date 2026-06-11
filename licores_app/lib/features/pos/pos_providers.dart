@@ -94,7 +94,7 @@ class PosCartState {
 class PosCartController extends StateNotifier<PosCartState> {
   PosCartController() : super(const PosCartState());
 
-  void addProduct(Producto producto, {int cantidad = 0}) {
+  void addProduct(Producto producto, {int cantidad = 1}) {
     final index = state.items.indexWhere(
       (item) => item.producto.id == producto.id,
     );
