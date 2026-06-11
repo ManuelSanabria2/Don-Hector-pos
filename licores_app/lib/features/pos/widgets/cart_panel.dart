@@ -8,10 +8,9 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/carrito_item.dart';
-import '../../../data/models/pago_mayorista.dart';
 import '../../../data/models/venta_enums.dart';
 import '../../../data/repositories/pos_repository.dart';
-import '../../../data/repositories/mayoristas_repository.dart';
+import '../../contabilidad/contabilidad_providers.dart';
 import '../../inventario/inventario_providers.dart';
 import '../../mayoristas/mayoristas_providers.dart';
 import '../pos_providers.dart';
@@ -25,13 +24,10 @@ class CartPanel extends ConsumerStatefulWidget {
 }
 
 class _CartPanelState extends ConsumerState<CartPanel> {
-  final _abonoController = TextEditingController();
-  bool _debeTodo = true;
   bool _submitting = false;
 
   @override
   void dispose() {
-    _abonoController.dispose();
     super.dispose();
   }
 
@@ -59,24 +55,6 @@ class _CartPanelState extends ConsumerState<CartPanel> {
             items: cart.items,
           );
 
-      if (cart.tipoVenta == TipoVenta.mayorista && !_debeTodo) {
-        final abono = CurrencyFormatter.parseCop(_abonoController.text);
-        if (abono > 0) {
-          final mayoristasRepo = ref.read(mayoristasRepositoryProvider);
-          final cobros = await mayoristasRepo.getCobrosCliente(cart.clienteId!);
-          final cobroVenta = cobros.firstWhere((c) => c.ventaId == ventaId);
-          
-          await mayoristasRepo.registrarPago(PagoMayorista(
-            id: '',
-            cobroId: cobroVenta.id,
-            monto: abono,
-            metodoPago: cart.metodoPago,
-            fecha: DateTime.now(),
-            notas: 'Abono inicial en venta',
-          ));
-        }
-      }
-
       final receipt = PosReceiptData(
         ventaId: ventaId,
         fecha: DateTime.now(),
@@ -92,10 +70,9 @@ class _CartPanelState extends ConsumerState<CartPanel> {
       ref.invalidate(inventarioProductosProvider);
       ref.invalidate(stockBajoProvider);
       ref.invalidate(mayoristasClientesProvider);
-      _abonoController.clear();
-      setState(() {
-        _debeTodo = true;
-      });
+      ref.invalidate(resumenHoyProvider);
+      ref.invalidate(metricasMesProvider);
+      ref.invalidate(ventasUltimos7DiasProvider);
 
       if (!mounted) return;
       await _showSuccessDialog(context, receipt);
@@ -279,32 +256,6 @@ class _CartPanelState extends ConsumerState<CartPanel> {
             if (cart.clienteId != null) ...[
               const SizedBox(height: 12),
               SaldoPendienteInfo(clienteId: cart.clienteId!),
-              const SizedBox(height: 8),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Debe todo'),
-                value: _debeTodo,
-                onChanged: (value) {
-                  setState(() {
-                    _debeTodo = value ?? true;
-                    if (_debeTodo) {
-                      _abonoController.clear();
-                    }
-                  });
-                },
-              ),
-              if (!_debeTodo) ...[
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _abonoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Abono inicial',
-                    prefixText: '\$ ',
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [CopInputFormatter()],
-                ),
-              ],
             ],
           ],
           const SizedBox(height: 12),
