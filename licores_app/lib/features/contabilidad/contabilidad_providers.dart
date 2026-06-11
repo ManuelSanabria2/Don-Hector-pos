@@ -14,7 +14,8 @@ final metricasMesProvider = FutureProvider<Map<String, dynamic>>((ref) async {
 
   final ventasMes = await repo.getTotalVentasRango(startOfMonth, endOfMonth);
   final gastosMes = await repo.getTotalGastosRango(startOfMonth, endOfMonth);
-  final utilidadEstimada = ventasMes - gastosMes;
+  final cogsMes = await repo.getCogsRango(startOfMonth, endOfMonth);
+  final utilidadEstimada = ventasMes - gastosMes - cogsMes;
 
   final estadoCuenta = await repo.getEstadoCuentaMayoristas();
   final deudaPendiente = estadoCuenta.fold<num>(0, (sum, row) => sum + ((row['deuda_pendiente'] as num?) ?? 0));

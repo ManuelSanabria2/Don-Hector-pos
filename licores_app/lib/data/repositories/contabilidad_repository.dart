@@ -89,6 +89,17 @@ class ContabilidadRepository {
     return rows.fold<num>(0, (sum, row) => sum + ((row['total'] as num?) ?? 0));
   }
 
+  Future<num> getCogsRango(DateTime start, DateTime end) async {
+    final result = await _client.rpc(
+      'cogs_rango',
+      params: {
+        'p_start': start.toIso8601String(),
+        'p_end': end.toIso8601String(),
+      },
+    );
+    return (result as num?) ?? 0;
+  }
+
   Future<List<Map<String, dynamic>>> getVentasPorDia(DateTime fecha) async {
     final start = DateTime(fecha.year, fecha.month, fecha.day);
     final end = start.add(const Duration(days: 1));
