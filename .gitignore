@@ -1,0 +1,13 @@
+# Ignore compiled APKs containing bundled .env assets
+apks/
+*.apk
+
+# Ignore environment config files
+.env
+licores_app/.env
+licores_app/.env.example
+
+# Ignore local builds and tools
+licores_app/build/
+licores_app/.dart_tool/
+licores_app/.flutter-plugins-dependencies
