@@ -281,9 +281,10 @@ class _RegistrarPagoSheetState extends ConsumerState<_RegistrarPagoSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final systemBottom = MediaQuery.paddingOf(context).bottom;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, bottom + 16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, bottom + systemBottom + 16),
       child: Form(
         key: _formKey,
         child: Column(

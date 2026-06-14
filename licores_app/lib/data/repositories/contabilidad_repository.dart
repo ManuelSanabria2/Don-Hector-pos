@@ -116,7 +116,10 @@ class ContabilidadRepository {
           tipo,
           estado,
           cliente_id,
-          notas
+          notas,
+          clientes_mayoristas (
+            nombre
+          )
         ''')
         .eq('estado', 'completada')
         .gte('fecha', start.toUtc().toIso8601String())

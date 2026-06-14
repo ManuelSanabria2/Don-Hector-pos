@@ -90,59 +90,62 @@ class _ClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _nombreController,
-              decoration: const InputDecoration(labelText: 'Nombre'),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Ingresa el nombre';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _nitController,
-              decoration: const InputDecoration(labelText: 'NIT'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _telefonoController,
-              decoration: const InputDecoration(labelText: 'Telefono'),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _direccionController,
-              decoration: const InputDecoration(labelText: 'Direccion'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _notasController,
-              decoration: const InputDecoration(labelText: 'Notas'),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: _saving
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save),
-              label: const Text('Guardar'),
-            ),
-          ],
+        child: SafeArea(
+          bottom: true,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              TextFormField(
+                controller: _nombreController,
+                decoration: const InputDecoration(labelText: 'Nombre'),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Ingresa el nombre';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _nitController,
+                decoration: const InputDecoration(labelText: 'NIT'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _telefonoController,
+                decoration: const InputDecoration(labelText: 'Telefono'),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _direccionController,
+                decoration: const InputDecoration(labelText: 'Direccion'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _notasController,
+                decoration: const InputDecoration(labelText: 'Notas'),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: _saving
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save),
+                label: const Text('Guardar'),
+              ),
+            ],
+          ),
         ),
       ),
     );

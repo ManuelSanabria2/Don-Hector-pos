@@ -7,6 +7,7 @@ abstract final class AppTheme {
     brightness: Brightness.dark,
     scaffoldBackgroundColor: AppColors.negro,
     cardColor: AppColors.superficie,
+    canvasColor: AppColors.superficie,
     colorScheme: const ColorScheme.dark(
       primary: AppColors.ambar,
       secondary: AppColors.verde,
@@ -160,6 +161,12 @@ abstract final class AppTheme {
         color: AppColors.blanco,
       ),
       iconTheme: const IconThemeData(color: AppColors.blanco, size: 24),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppColors.superficie2,
+      contentTextStyle: GoogleFonts.outfit(color: AppColors.blanco, fontSize: 14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      behavior: SnackBarBehavior.floating,
     ),
   );
 }

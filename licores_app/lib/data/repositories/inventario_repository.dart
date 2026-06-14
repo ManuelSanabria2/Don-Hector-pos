@@ -54,17 +54,24 @@ class InventarioRepository {
     // El stock_actual se maneja exclusivamente a traves de la RPC ajustar_stock para mantener la auditoria
     values.remove('stock_actual');
 
-    if ((values['id'] as String?)?.isEmpty ?? false) {
-      values.remove('id');
-    }
-
-    final response = await _client
-        .from('productos')
-        .upsert(values)
-        .select('id')
-        .single();
+    final isNew = (values['id'] as String?)?.isEmpty ?? true;
     
-    return response['id'] as String;
+    if (isNew) {
+      values.remove('id');
+      final response = await _client
+          .from('productos')
+          .insert(values)
+          .select('id')
+          .single();
+      return response['id'] as String;
+    } else {
+      final response = await _client
+          .from('productos')
+          .upsert(values)
+          .select('id')
+          .single();
+      return response['id'] as String;
+    }
   }
 
   Future<void> ajustarStock({
@@ -83,6 +90,10 @@ class InventarioRepository {
 
   Future<void> toggleActivo(String id, bool activo) async {
     await _client.from('productos').update({'activo': activo}).eq('id', id);
+  }
+
+  Future<void> deleteProducto(String id) async {
+    await _client.from('productos').delete().eq('id', id);
   }
 
   Stream<List<Producto>> watchStockBajo() {

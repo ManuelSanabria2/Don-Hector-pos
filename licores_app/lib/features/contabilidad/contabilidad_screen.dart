@@ -139,7 +139,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              color: color.withOpacity(0.1),
+              color: color.withOpacity(0.25),
               child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(width: 16),
@@ -169,6 +169,44 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAnalysisRow(
+    String label,
+    num value, {
+    bool isPositive = false,
+    bool isNegative = false,
+    bool isHighlight = false,
+    Color? highlightColor,
+  }) {
+    final currency = NumberFormat('#,##0.00');
+    final textColor = isHighlight
+        ? (highlightColor ?? AppColors.verde)
+        : (isPositive
+            ? AppColors.verde
+            : (isNegative ? AppColors.rojo : AppColors.blanco));
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: isHighlight ? AppColors.blanco : AppColors.blancoD,
+            fontSize: isHighlight ? 15 : 13,
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          '${isNegative ? "-" : (isPositive ? "+" : "")} \$ ${currency.format(value)}',
+          style: TextStyle(
+            color: textColor,
+            fontSize: isHighlight ? 16 : 14,
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
@@ -288,7 +326,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
               crossAxisCount: columns,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
-              childAspectRatio: constraints.maxWidth >= 900 ? 2.2 : 2.5,
+              childAspectRatio: constraints.maxWidth >= 900 ? 2.2 : (constraints.maxWidth >= 600 ? 2.5 : 1.6),
               children: [
                 _buildMetricCard(
                   _selectedDate.day == DateTime.now().day && _selectedDate.month == DateTime.now().month && _selectedDate.year == DateTime.now().year
@@ -311,7 +349,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
                   Colors.red,
                 ),
                 _buildMetricCard(
-                  'Utilidad Estimada',
+                  'Utilidad del Mes',
                   '\$ ${currency.format(mes['utilidad_estimada'] ?? 0)}',
                   Icons.trending_up,
                   Colors.teal,
@@ -325,6 +363,66 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
               ],
             );
           },
+        ),
+        const SizedBox(height: 16),
+        Card(
+          elevation: 0,
+          color: AppColors.superficie,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.borde, width: 1.5),
+            ),
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.analytics_outlined, color: AppColors.ambar),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Análisis de Utilidad de este Mes',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.blanco,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildAnalysisRow('(+) Ingresos por Ventas', mes['ventas_mes'] ?? 0, isPositive: true),
+                const SizedBox(height: 8),
+                _buildAnalysisRow('(-) Costo de Productos (COGS)', (mes['ventas_mes'] as num? ?? 0) - (mes['gastos_mes'] as num? ?? 0) - (mes['utilidad_estimada'] as num? ?? 0), isNegative: true),
+                const SizedBox(height: 8),
+                _buildAnalysisRow('(-) Gastos Operativos', mes['gastos_mes'] ?? 0, isNegative: true),
+                const Divider(color: AppColors.borde, height: 24, thickness: 1.5),
+                _buildAnalysisRow(
+                  '(=) Utilidad Neta Real',
+                  mes['utilidad_estimada'] ?? 0,
+                  isHighlight: true,
+                  highlightColor: AppColors.verde,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Margen Neto Real',
+                      style: TextStyle(color: AppColors.blancoD, fontSize: 13),
+                    ),
+                    Text(
+                      '${((mes['utilidad_estimada'] ?? 0) / ((mes['ventas_mes'] ?? 1) > 0 ? (mes['ventas_mes'] ?? 1) : 1) * 100).toStringAsFixed(1)}%',
+                      style: const TextStyle(
+                        color: AppColors.blanco,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 32),
         Text('Top 5 Productos del mes', style: Theme.of(context).textTheme.titleLarge),
@@ -416,14 +514,15 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
                 final total = venta['total'] as num? ?? 0;
                 final metodoPago = venta['metodo_pago'] as String? ?? '';
                 final tipo = venta['tipo'] as String? ?? '';
-                final clienteId = venta['cliente_id'] as String?;
+                final clienteMap = venta['clientes_mayoristas'] as Map?;
+                final clienteNombre = clienteMap?['nombre'] as String? ?? 'Público General';
                 final notas = venta['notas'] as String?;
 
                 return ListTile(
                   title: Row(
                     children: [
                       Text(
-                        'Venta ${venta['id'].toString().substring(0, 8)}',
+                        clienteNombre,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: AppColors.blanco,
                             ),
@@ -446,13 +545,6 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
                               color: AppColors.blanco,
                             ),
                       ),
-                      if (clienteId != null)
-                        Text(
-                          'Cliente: $clienteId',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.blancoD,
-                              ),
-                        ),
                       if (notas != null && notas.isNotEmpty)
                         Text(
                           'Notas: $notas',

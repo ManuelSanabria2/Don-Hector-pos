@@ -7,8 +7,25 @@ import '../../core/constants/app_colors.dart';
 import '../gastos/gastos_providers.dart';
 import 'contabilidad_providers.dart';
 
-class AnalisisFinancieroScreen extends ConsumerWidget {
+class AnalisisFinancieroScreen extends ConsumerStatefulWidget {
   const AnalisisFinancieroScreen({super.key});
+
+  @override
+  ConsumerState<AnalisisFinancieroScreen> createState() => _AnalisisFinancieroScreenState();
+}
+
+class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScreen> {
+  late DateTimeRange _dateRange;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _dateRange = DateTimeRange(
+      start: DateTime(now.year, now.month, 1),
+      end: DateTime(now.year, now.month, now.day),
+    );
+  }
 
   Widget _buildPieLegend(String title, String value, Color color) {
     return Row(
@@ -62,21 +79,63 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildAnalysisRow(
+    String label,
+    num value, {
+    bool isPositive = false,
+    bool isNegative = false,
+    bool isHighlight = false,
+    Color? highlightColor,
+  }) {
+    final currency = NumberFormat('#,##0.00');
+    final textColor = isHighlight
+        ? (highlightColor ?? AppColors.verde)
+        : (isPositive
+            ? AppColors.verde
+            : (isNegative ? AppColors.rojo : AppColors.blanco));
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: isHighlight ? AppColors.blanco : AppColors.blancoD,
+            fontSize: isHighlight ? 14 : 12,
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          '${isNegative ? "-" : (isPositive ? "+" : "")} \$ ${currency.format(value)}',
+          style: TextStyle(
+            color: textColor,
+            fontSize: isHighlight ? 15 : 13,
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final resumenHoy = ref.watch(resumenHoyProvider);
     final metricasMes = ref.watch(metricasMesProvider);
     final ventas7Dias = ref.watch(ventasUltimos7DiasProvider);
     final topProductos = ref.watch(topProductosMesProvider);
     final gastosAsync = ref.watch(gastosDelMesProvider);
     final categoriasAsync = ref.watch(categoriasGastoProvider);
+    final valorInventario = ref.watch(valorInventarioProvider);
+    final utilidadRango = ref.watch(utilidadRangoProvider(_dateRange));
 
     final isLoading = resumenHoy.isLoading ||
         metricasMes.isLoading ||
         ventas7Dias.isLoading ||
         topProductos.isLoading ||
         gastosAsync.isLoading ||
-        categoriasAsync.isLoading;
+        categoriasAsync.isLoading ||
+        valorInventario.isLoading ||
+        utilidadRango.isLoading;
 
     if (isLoading) {
       return const Scaffold(
@@ -90,6 +149,8 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
     final dias7 = ventas7Dias.value ?? [];
     final gastos = gastosAsync.value ?? [];
     final top = topProductos.value ?? [];
+    final inventarioData = valorInventario.value ?? {};
+    final rangeData = utilidadRango.value ?? {};
 
     final totalGastos = gastos.fold<num>(0, (sum, g) => sum + g.monto);
 
@@ -127,7 +188,7 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 0. RESUMEN DE HOY Y UTILIDAD DIARIA
+          // 0. RESUMEN DE HOY Y UTILIDAD DIARIA REAL
           Card(
             elevation: 0,
             color: AppColors.superficie,
@@ -140,7 +201,7 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Resumen del Día & Utilidad Diaria',
+                    'Resumen del Día & Utilidad Diaria Real',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -186,13 +247,12 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Utilidad Diaria Estimada',
+                              'Utilidad Diaria Real',
                               style: TextStyle(color: AppColors.blancoD, fontSize: 12),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              // Estimamos la utilidad diaria bruta aplicando el mismo ratio del mes o un valor bruto (Ventas Hoy)
-                              '\$ ${currency.format((hoy['total_ventas'] ?? 0) * 0.35)}', // Estimación estándar del 35% de margen bruto
+                              '\$ ${currency.format(hoy['utilidad_hoy'] ?? 0)}',
                               style: const TextStyle(
                                 color: AppColors.verde,
                                 fontSize: 20,
@@ -200,11 +260,217 @@ class AnalisisFinancieroScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            const Text(
-                              'Margen estimado: 35%',
-                              style: TextStyle(color: AppColors.blancoD, fontSize: 11),
+                            Text(
+                              'Margen real: ${((hoy['utilidad_hoy'] ?? 0) / ((hoy['total_ventas'] ?? 1) > 0 ? (hoy['total_ventas'] ?? 1) : 1) * 100).toStringAsFixed(1)}%',
+                              style: const TextStyle(color: AppColors.blancoD, fontSize: 11),
                             ),
                           ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // VALOR TOTAL DEL INVENTARIO
+          Card(
+            elevation: 0,
+            color: AppColors.superficie,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.borde, width: 1.5),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.inventory_2_outlined, color: AppColors.ambar),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Valor de Inventario Actual',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.blanco,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Valor al Costo',
+                              style: TextStyle(color: AppColors.blancoD, fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '\$ ${currency.format(inventarioData['total_costo'] ?? 0)}',
+                              style: const TextStyle(
+                                color: AppColors.blanco,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        height: 40,
+                        width: 1.5,
+                        color: AppColors.borde,
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Valor de Venta (Público)',
+                              style: TextStyle(color: AppColors.blancoD, fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '\$ ${currency.format(inventarioData['total_venta'] ?? 0)}',
+                              style: const TextStyle(
+                                color: AppColors.blanco,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(color: AppColors.borde, height: 24, thickness: 1.5),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Utilidad Potencial Estimada',
+                        style: TextStyle(color: AppColors.blancoD, fontSize: 13),
+                      ),
+                      Text(
+                        '\$ ${currency.format(inventarioData['utilidad_potencial'] ?? 0)}',
+                        style: const TextStyle(
+                          color: AppColors.verde,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // UTILIDAD POR RANGO DE FECHAS
+          Card(
+            elevation: 0,
+            color: AppColors.superficie,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.borde, width: 1.5),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const Icon(Icons.date_range, color: AppColors.ambar),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Filtro de Utilidad',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.blanco,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton.icon(
+                        icon: const Icon(Icons.calendar_month, size: 16),
+                        label: Text(
+                          '${DateFormat('dd/MM/yy').format(_dateRange.start)} - ${DateFormat('dd/MM/yy').format(_dateRange.end)}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        onPressed: () async {
+                          final picked = await showDateRangePicker(
+                            context: context,
+                            initialDateRange: _dateRange,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                            builder: (context, child) {
+                              return Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: ColorScheme.dark(
+                                    primary: AppColors.ambar,
+                                    onPrimary: Colors.black,
+                                    surface: const Color(0xFA131310),
+                                    onSurface: AppColors.blanco,
+                                  ),
+                                  dialogBackgroundColor: const Color(0xFA131310),
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _dateRange = picked;
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const Divider(color: AppColors.borde, height: 20, thickness: 1.5),
+                  const SizedBox(height: 8),
+                  _buildAnalysisRow('(+) Ingresos por Ventas', rangeData['ventas'] ?? 0, isPositive: true),
+                  const SizedBox(height: 8),
+                  _buildAnalysisRow('(-) Costo de Productos (COGS)', rangeData['cogs'] ?? 0, isNegative: true),
+                  const SizedBox(height: 8),
+                  _buildAnalysisRow('(-) Gastos en el Periodo', rangeData['gastos'] ?? 0, isNegative: true),
+                  const Divider(color: AppColors.borde, height: 24, thickness: 1.5),
+                  _buildAnalysisRow(
+                    '(=) Utilidad Neta Real',
+                    rangeData['utilidad'] ?? 0,
+                    isHighlight: true,
+                    highlightColor: AppColors.verde,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Margen Neto Real',
+                        style: TextStyle(color: AppColors.blancoD, fontSize: 13),
+                      ),
+                      Text(
+                        '${((rangeData['utilidad'] ?? 0) / ((rangeData['ventas'] ?? 1) > 0 ? (rangeData['ventas'] ?? 1) : 1) * 100).toStringAsFixed(1)}%',
+                        style: const TextStyle(
+                          color: AppColors.blanco,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],

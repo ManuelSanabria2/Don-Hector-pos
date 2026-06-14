@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'core/config/environment.dart';
 import 'core/constants/app_routes.dart';
 import 'core/constants/app_strings.dart';
@@ -23,6 +25,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   print('Starting app initialization...');
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    print('Error loading .env file: $e');
+  }
   await initializeDateFormatting('es', null);
 
   final supabaseUrl = Environment.supabaseUrl;

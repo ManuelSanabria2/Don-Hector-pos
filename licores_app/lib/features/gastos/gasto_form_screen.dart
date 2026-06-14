@@ -96,73 +96,76 @@ class _GastoFormScreenState extends ConsumerState<GastoFormScreen> {
         data: (categorias) {
           return Form(
             key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                TextFormField(
-                  controller: _descripcionCtrl,
-                  decoration: const InputDecoration(labelText: 'Descripción'),
-                  validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _montoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Monto (COP)',
-                    prefixText: '\$ ',
+            child: SafeArea(
+              bottom: true,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TextFormField(
+                    controller: _descripcionCtrl,
+                    decoration: const InputDecoration(labelText: 'Descripción'),
+                    validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Requerido';
-                    if (num.tryParse(v) == null) return 'Número inválido';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Categoría'),
-                  value: _categoriaId,
-                  items: categorias.map((c) {
-                    return DropdownMenuItem(
-                      value: c.id,
-                      child: Text(c.nombre),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => _categoriaId = val),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Fecha'),
-                  subtitle: Text(DateFormat('yyyy-MM-dd').format(_fecha)),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _fecha,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) {
-                      setState(() => _fecha = picked);
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _notasCtrl,
-                  decoration: const InputDecoration(labelText: 'Notas (Opcional)'),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 32),
-                FilledButton.icon(
-                  onPressed: _isLoading ? null : _guardar,
-                  icon: _isLoading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.save),
-                  label: const Text('Guardar'),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _montoCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Monto (COP)',
+                      prefixText: '\$ ',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Requerido';
+                      if (num.tryParse(v) == null) return 'Número inválido';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'Categoría'),
+                    value: _categoriaId,
+                    items: categorias.map((c) {
+                      return DropdownMenuItem(
+                        value: c.id,
+                        child: Text(c.nombre),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setState(() => _categoriaId = val),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Fecha'),
+                    subtitle: Text(DateFormat('yyyy-MM-dd').format(_fecha)),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _fecha,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() => _fecha = picked);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _notasCtrl,
+                    decoration: const InputDecoration(labelText: 'Notas (Opcional)'),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 32),
+                  FilledButton.icon(
+                    onPressed: _isLoading ? null : _guardar,
+                    icon: _isLoading
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.save),
+                    label: const Text('Guardar'),
+                  ),
+                ],
+              ),
             ),
           );
         }

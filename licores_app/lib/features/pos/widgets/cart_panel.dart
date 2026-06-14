@@ -55,6 +55,15 @@ class _CartPanelState extends ConsumerState<CartPanel> {
             items: cart.items,
           );
 
+      final clientesAsync = ref.read(posClientesProvider);
+      String? clienteNombre;
+      if (cart.clienteId != null && clientesAsync.value != null) {
+        try {
+          final match = clientesAsync.value!.firstWhere((c) => c.cliente.id == cart.clienteId);
+          clienteNombre = match.cliente.nombre;
+        } catch (_) {}
+      }
+
       final receipt = PosReceiptData(
         ventaId: ventaId,
         fecha: DateTime.now(),
@@ -63,6 +72,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
         descuento: receiptDescuento,
         total: receiptTotal,
         metodoPago: receiptMetodoPago,
+        clienteNombre: clienteNombre,
       );
 
       ref.read(posCartProvider.notifier).clear();

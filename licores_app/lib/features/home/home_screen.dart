@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_strings.dart';
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../shared/widgets/app_shell_bar.dart';
 import '../contabilidad/contabilidad_providers.dart';
@@ -105,7 +106,7 @@ class HomeScreen extends ConsumerWidget {
               },
               type: BottomNavigationBarType.fixed,
               selectedItemColor: colors.primary,
-              unselectedItemColor: colors.onSurface.withOpacity(0.6),
+              unselectedItemColor: colors.onSurface.withOpacity(0.85),
               showUnselectedLabels: true,
               items: const [
                 BottomNavigationBarItem(
@@ -182,7 +183,7 @@ class _DashboardView extends ConsumerWidget {
               ),
               const Spacer(),
               Container(
-                color: colors.primary.withOpacity(0.1),
+                color: colors.primary.withOpacity(0.25),
                 padding: const EdgeInsets.all(8),
                 child: Icon(Icons.person, color: colors.primary),
               ),
@@ -230,7 +231,7 @@ class _DashboardView extends ConsumerWidget {
                         Text(
                           'VENTAS DE HOY',
                           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.2,
                               ),
@@ -239,7 +240,7 @@ class _DashboardView extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: colors.primary.withOpacity(0.1),
+                            color: colors.primary.withOpacity(0.25),
                             border: Border.all(color: colors.primary),
                           ),
                           child: Text(
@@ -349,7 +350,7 @@ class _DashboardView extends ConsumerWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
+            color: AppColors.blancoD,
             fontSize: 12,
           ),
         ),

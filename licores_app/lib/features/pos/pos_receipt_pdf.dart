@@ -18,6 +18,7 @@ class PosReceiptData {
     required this.descuento,
     required this.total,
     required this.metodoPago,
+    this.clienteNombre,
   });
 
   final String ventaId;
@@ -27,6 +28,7 @@ class PosReceiptData {
   final num descuento;
   final num total;
   final MetodoPago metodoPago;
+  final String? clienteNombre;
 }
 
 class PosReceiptPdf {
@@ -36,10 +38,10 @@ class PosReceiptPdf {
         ? receipt.ventaId.substring(0, 8)
         : receipt.ventaId;
 
-    // Cargar logo LogoV1 desde assets
+    // Cargar logo remove-bg desde assets
     pw.MemoryImage? logoImage;
     try {
-      final byteData = await rootBundle.load('assets/images/logo_v1.png');
+      final byteData = await rootBundle.load('assets/images/logov1_removebg.png');
       final imageBytes = byteData.buffer.asUint8List();
       logoImage = pw.MemoryImage(imageBytes);
     } catch (e) {
@@ -84,7 +86,8 @@ class PosReceiptPdf {
                             ),
                           ),
                           pw.SizedBox(height: 8),
-                          pw.Text('Venta: $ventaNumero', style: const pw.TextStyle(color: PdfColors.black)),
+                          pw.Text('Cliente: ${receipt.clienteNombre ?? "Público General"}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                          pw.SizedBox(height: 4),
                           pw.Text('Fecha: ${DateFormatter.dateTime(receipt.fecha)}', style: const pw.TextStyle(color: PdfColors.black)),
                           pw.Text(
                             'Método de pago: ${_metodoPagoLabel(receipt.metodoPago)}',

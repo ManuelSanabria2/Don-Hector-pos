@@ -46,7 +46,7 @@ begin
     motivo
   ) values (
     p_producto_id,
-    p_tipo,
+    p_tipo::tipo_movimiento,
     p_cantidad,
     v_stock_antes,
     v_stock_despues,

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 abstract final class AppColors {
   // Fondos y superficies: Gris oscuro más claro y acentos azul claro
   static const Color negro = Color(0xFF24282F);      // Gris oscuro más claro (fondo base premium)
-  static const Color superficie = Color(0x13FFFFFF); // Frosted Glass: Blanco translúcido con 7% de opacidad
-  static const Color superficie2 = Color(0x22FFFFFF); // Blanco translúcido con 13% de opacidad para campos
-  static const Color crema = Color(0x33FFFFFF);       // Tono translúcido medio
+  static const Color superficie = Color(0xFF33373E); // Color sólido (antes blanco translúcido con 7% de opacidad)
+  static const Color superficie2 = Color(0xFF40454D); // Color sólido (antes blanco translúcido con 13% de opacidad)
+  static const Color crema = Color(0xFF50545C);       // Color sólido (antes tono translúcido medio)
   static const Color gris = Color(0xFF9098A0);        // Gris claro para textos secundarios
 
   // Sin bordes para los recuadros
