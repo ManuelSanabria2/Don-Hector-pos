@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_routes.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../data/models/categoria.dart';
 import '../../data/models/producto.dart';
 import '../../data/repositories/inventario_repository.dart';
 import 'inventario_providers.dart';
@@ -206,9 +207,22 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     }
   }
 
+  void _stripDecimals(TextEditingController controller) {
+    final text = controller.text;
+    if (text.contains(',')) {
+      controller.text = text.split(',')[0];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final categorias = ref.watch(inventarioCategoriasProvider);
+    final categoriasList = categorias.value ?? [];
+    final selectedCategory = categoriasList.firstWhere(
+      (c) => c.id == _categoriaId,
+      orElse: () => const Categoria(id: '', nombre: ''),
+    );
+    final isCerveza = selectedCategory.nombre.toLowerCase().trim() == 'cerveza';
 
     return Scaffold(
       appBar: AppBar(
@@ -258,19 +272,50 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                         child: Text(categoria.nombre),
                       ),
                   ],
-                  onChanged: (value) => setState(() => _categoriaId = value),
+                  onChanged: (value) {
+                    setState(() {
+                      _categoriaId = value;
+                      final selected = items.firstWhere(
+                        (c) => c.id == value,
+                        orElse: () => const Categoria(id: '', nombre: ''),
+                      );
+                      final isNewCerveza = selected.nombre.toLowerCase().trim() == 'cerveza';
+                      if (!isNewCerveza) {
+                        _stripDecimals(_precioPublicoController);
+                        _stripDecimals(_precioMayoristaController);
+                        _stripDecimals(_costoController);
+                      }
+                    });
+                  },
                 ),
               ),
               const SizedBox(height: 12),
               _MoneyField(
                 controller: _precioPublicoController,
                 label: 'Precio publico',
+                allowDecimals: isCerveza,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Ingresa el precio público';
+                  }
+                  if (!isCerveza && value.contains(',')) {
+                    return 'No se permiten decimales para esta categoría';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               _MoneyField(
                 controller: _precioMayoristaController,
                 label: 'Precio mayorista',
-                validator: (_) {
+                allowDecimals: isCerveza,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Ingresa el precio mayorista';
+                  }
+                  if (!isCerveza && value.contains(',')) {
+                    return 'No se permiten decimales para esta categoría';
+                  }
                   final mayorista = CurrencyFormatter.parseCop(
                     _precioMayoristaController.text,
                   );
@@ -282,7 +327,20 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                 },
               ),
               const SizedBox(height: 12),
-              _MoneyField(controller: _costoController, label: 'Costo'),
+              _MoneyField(
+                controller: _costoController,
+                label: 'Costo',
+                allowDecimals: isCerveza,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Ingresa el costo';
+                  }
+                  if (!isCerveza && value.contains(',')) {
+                    return 'No se permiten decimales para esta categoría';
+                  }
+                  return null;
+                },
+              ),
               const SizedBox(height: 12),
               _IntegerField(
                 controller: _stockActualController,
@@ -361,11 +419,13 @@ class _MoneyField extends StatelessWidget {
     required this.controller,
     required this.label,
     this.validator,
+    this.allowDecimals = false,
   });
 
   final TextEditingController controller;
   final String label;
   final FormFieldValidator<String>? validator;
+  final bool allowDecimals;
 
   @override
   Widget build(BuildContext context) {
@@ -375,8 +435,8 @@ class _MoneyField extends StatelessWidget {
         labelText: label,
         prefixText: '\$ ',
       ),
-      keyboardType: TextInputType.number,
-      inputFormatters: [CopInputFormatter()],
+      keyboardType: TextInputType.numberWithOptions(decimal: allowDecimals),
+      inputFormatters: [CopInputFormatter(allowDecimals: allowDecimals)],
       validator: validator,
     );
   }
