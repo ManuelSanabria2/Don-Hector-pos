@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/model_helpers.dart';
 
 import 'supabase_providers.dart';
 
@@ -75,8 +76,8 @@ class ContabilidadRepository {
         .from('gastos')
         .select('monto')
         .eq('anulado', false)
-        .gte('fecha', start.toUtc().toIso8601String())
-        .lte('fecha', end.toUtc().toIso8601String());
+        .gte('fecha', dateOnly(start)!)
+        .lte('fecha', dateOnly(end)!);
     return rows.fold<num>(0, (sum, row) => sum + ((row['monto'] as num?) ?? 0));
   }
 
