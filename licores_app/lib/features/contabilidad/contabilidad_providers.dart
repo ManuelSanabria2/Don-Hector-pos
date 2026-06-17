@@ -77,6 +77,51 @@ final metricasMesProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   };
 });
 
+final metricasDiaProvider = FutureProvider.autoDispose
+    .family<Map<String, dynamic>, DateTime>((ref, fecha) async {
+  final repo = ref.watch(contabilidadRepositoryProvider);
+  
+  final startOfDay = DateTime(fecha.year, fecha.month, fecha.day);
+  final endOfDay = DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
+
+  final ventasDia = await repo.getTotalVentasRango(startOfDay, endOfDay);
+  final gastosDia = await repo.getTotalGastosRango(startOfDay, endOfDay);
+  final cogsDia = await repo.getCogsRango(startOfDay, endOfDay);
+  
+  final deudores = await repo.getEstadoCuentaMayoristas();
+  final deudaPendiente = deudores.fold<num>(0, (sum, row) => sum + ((row['deuda_pendiente'] as num?) ?? 0));
+  
+  final utilidadDia = ventasDia - gastosDia - cogsDia;
+
+  final startOfMonth = DateTime(fecha.year, fecha.month, 1);
+  final endOfMonth = DateTime(fecha.year, fecha.month + 1, 0, 23, 59, 59);
+  final gastosMes = await repo.getTotalGastosRango(startOfMonth, endOfMonth);
+  
+  final ventasPorMetodo = await repo.getVentasPorMetodoPagoRango(startOfMonth, endOfMonth);
+  final ventasEfectivoPublico = ventasPorMetodo['efectivo_publico'] ?? 0;
+  final transferenciasPublico = ventasPorMetodo['transferencias_publico'] ?? 0;
+
+  final abonosPorMetodo = await repo.getAbonosPorMetodoPagoRango(startOfMonth, endOfMonth);
+  final abonosEfectivo = abonosPorMetodo['efectivo'] ?? 0;
+  final abonosTransferencia = abonosPorMetodo['transferencias'] ?? 0;
+
+  final efectivoReal = ventasEfectivoPublico + abonosEfectivo - gastosMes;
+  final transferenciasMes = transferenciasPublico + abonosTransferencia;
+
+  final ventasHoyList = await repo.getVentasPorDia(fecha);
+
+  return {
+    'num_ventas': ventasHoyList.length,
+    'ventas_dia': ventasDia,
+    'gastos_dia': gastosDia,
+    'cogs_dia': cogsDia,
+    'utilidad_dia': utilidadDia,
+    'deuda_pendiente': deudaPendiente,
+    'efectivo_real': efectivoReal,
+    'transferencias_mes': transferenciasMes,
+  };
+});
+
 final ventasUltimos7DiasProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final repo = ref.watch(contabilidadRepositoryProvider);
   return repo.getResumenVentasUltimos7Dias();

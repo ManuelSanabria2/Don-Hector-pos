@@ -27,8 +27,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
   DateTime _selectedDate = DateTime.now();
 
   Future<void> _exportarPdf(
-    Map<String, dynamic> hoy,
-    Map<String, dynamic> mes,
+    Map<String, dynamic> dia,
     List<Map<String, dynamic>> topProductos,
   ) async {
     Uint8List? chartImageBytes;
@@ -52,11 +51,11 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
             children: [
               pw.Text('Reporte de Contabilidad', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 20),
-              pw.Text('Ventas Hoy: ${CurrencyFormatter.cop(hoy['total_ventas'] ?? 0)} (${hoy['num_ventas'] ?? 0} txs)', style: const pw.TextStyle(fontSize: 16)),
-              pw.Text('Ventas del Mes: ${CurrencyFormatter.cop(mes['ventas_mes'] ?? 0)}', style: const pw.TextStyle(fontSize: 16)),
-              pw.Text('Gastos del Mes: ${CurrencyFormatter.cop(mes['gastos_mes'] ?? 0)}', style: const pw.TextStyle(fontSize: 16)),
-              pw.Text('Utilidad Estimada: ${CurrencyFormatter.cop(mes['utilidad_estimada'] ?? 0)}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-              pw.Text('Deuda de Mayoristas: ${CurrencyFormatter.cop(mes['deuda_pendiente'] ?? 0)}', style: const pw.TextStyle(fontSize: 16)),
+              pw.Text('Ventas del Día: ${CurrencyFormatter.cop(dia['ventas_dia'] ?? 0)} (${dia['num_ventas'] ?? 0} txs)', style: const pw.TextStyle(fontSize: 16)),
+              pw.Text('Gastos del Día: ${CurrencyFormatter.cop(dia['gastos_dia'] ?? 0)}', style: const pw.TextStyle(fontSize: 16)),
+              pw.Text('Utilidad del Día: ${CurrencyFormatter.cop(dia['utilidad_dia'] ?? 0)}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+              pw.Text('Deuda de Mayoristas: ${CurrencyFormatter.cop(dia['deuda_pendiente'] ?? 0)}', style: const pw.TextStyle(fontSize: 16)),
+              pw.Text('Efectivo Real (Mes): ${CurrencyFormatter.cop(dia['efectivo_real'] ?? 0)}', style: const pw.TextStyle(fontSize: 16)),
               pw.SizedBox(height: 20),
               pw.Text('Top 5 Productos del Mes:', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 10),
@@ -206,22 +205,57 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
   }
 
 
+  Widget _buildAnalysisRow(
+    String label,
+    num value, {
+    bool isPositive = false,
+    bool isNegative = false,
+    bool isHighlight = false,
+    Color? highlightColor,
+  }) {
+    final textColor = isHighlight
+        ? (highlightColor ?? AppColors.verde)
+        : (isPositive
+            ? AppColors.verde
+            : (isNegative ? AppColors.rojo : AppColors.blanco));
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: isHighlight ? AppColors.blanco : AppColors.blancoD,
+            fontSize: isHighlight ? 15 : 13,
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          '${isNegative ? "-" : (isPositive ? "+" : "")} ${CurrencyFormatter.cop(value)}',
+          style: TextStyle(
+            color: textColor,
+            fontSize: isHighlight ? 16 : 14,
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final resumenHoy = ref.watch(resumenHoyProvider);
-    final metricasMes = ref.watch(metricasMesProvider);
+    final metricasDia = ref.watch(metricasDiaProvider(_selectedDate));
     final ventas7Dias = ref.watch(ventasUltimos7DiasProvider);
     final topProductos = ref.watch(topProductosMesProvider);
     final ventasHoy = ref.watch(ventasPorDiaProvider(_selectedDate));
 
-    final isLoading = resumenHoy.isLoading || metricasMes.isLoading || ventas7Dias.isLoading || topProductos.isLoading;
+    final isLoading = metricasDia.isLoading || ventas7Dias.isLoading || topProductos.isLoading || ventasHoy.isLoading;
 
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final hoy = resumenHoy.value ?? {};
-    final mes = metricasMes.value ?? {};
+    final dia = metricasDia.value ?? {};
     final top = topProductos.value ?? [];
     final ventasHoyList = ventasHoy.value ?? [];
 
@@ -299,7 +333,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
                   ),
                 ),
                 FilledButton.icon(
-                  onPressed: () => _exportarPdf(hoy, mes, top),
+                  onPressed: () => _exportarPdf(dia, top),
                   icon: const Icon(Icons.picture_as_pdf),
                   label: const Text('Exportar PDF'),
                   style: FilledButton.styleFrom(
@@ -313,31 +347,146 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
         const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 600 ? 2 : 1;
+            final columns = constraints.maxWidth >= 900 ? 3 : (constraints.maxWidth >= 600 ? 2 : 1);
+            double aspectRatio = 1.6;
+            if (constraints.maxWidth >= 900) {
+              aspectRatio = 2.2;
+            } else if (constraints.maxWidth >= 600) {
+              aspectRatio = 2.5;
+            }
+
             return GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: columns,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
-              childAspectRatio: constraints.maxWidth >= 600 ? 3.0 : 1.6,
+              childAspectRatio: aspectRatio,
               children: [
                 _buildMetricCard(
+                  _selectedDate.day == DateTime.now().day && _selectedDate.month == DateTime.now().month && _selectedDate.year == DateTime.now().year
+                      ? 'Ventas Hoy (${dia['num_ventas'] ?? 0} txs)'
+                      : 'Ventas del Día (${dia['num_ventas'] ?? 0} txs)',
+                  CurrencyFormatter.cop(dia['ventas_dia'] ?? 0),
+                  Icons.today,
+                  Colors.blue,
+                ),
+                _buildMetricCard(
+                  'Gastos del Día',
+                  CurrencyFormatter.cop(dia['gastos_dia'] ?? 0),
+                  Icons.money_off,
+                  Colors.red,
+                ),
+                _buildMetricCard(
+                  'Utilidad del Día',
+                  CurrencyFormatter.cop(dia['utilidad_dia'] ?? 0),
+                  Icons.trending_up,
+                  Colors.teal,
+                ),
+                _buildMetricCard(
                   'Deuda Mayoristas',
-                  CurrencyFormatter.cop(mes['deuda_pendiente'] ?? 0),
+                  CurrencyFormatter.cop(dia['deuda_pendiente'] ?? 0),
                   Icons.warning_amber,
                   Colors.orange,
                 ),
                 _buildMetricCard(
                   'Efectivo Real',
-                  CurrencyFormatter.cop(mes['efectivo_real'] ?? 0),
+                  CurrencyFormatter.cop(dia['efectivo_real'] ?? 0),
                   Icons.account_balance_wallet,
                   Colors.amber,
-                  subtitle: 'Transf: ${CurrencyFormatter.cop(mes['transferencias_mes'] ?? 0)}',
+                  subtitle: 'Transf: ${CurrencyFormatter.cop(dia['transferencias_mes'] ?? 0)}',
                 ),
               ],
             );
           },
+        ),
+        const SizedBox(height: 16),
+        Card(
+          elevation: 0,
+          color: AppColors.superficie,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.borde, width: 1.5),
+            ),
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.analytics_outlined, color: AppColors.ambar),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Análisis de Utilidad del Día',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.blanco,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildAnalysisRow('(+) Ingresos por Ventas', dia['ventas_dia'] ?? 0, isPositive: true),
+                const SizedBox(height: 8),
+                _buildAnalysisRow('(-) Costo de Productos (COGS)', dia['cogs_dia'] ?? 0, isNegative: true),
+                const SizedBox(height: 8),
+                _buildAnalysisRow('(-) Gastos Operativos', dia['gastos_dia'] ?? 0, isNegative: true),
+                const Divider(color: AppColors.borde, height: 24, thickness: 1.5),
+                _buildAnalysisRow(
+                  '(=) Utilidad Neta Real',
+                  dia['utilidad_dia'] ?? 0,
+                  isHighlight: true,
+                  highlightColor: AppColors.verde,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Margen Neto Real',
+                      style: TextStyle(color: AppColors.blancoD, fontSize: 13),
+                    ),
+                    Text(
+                      '${((dia['utilidad_dia'] ?? 0) / ((dia['ventas_dia'] ?? 1) > 0 ? (dia['ventas_dia'] ?? 1) : 1) * 100).toStringAsFixed(1)}%',
+                      style: const TextStyle(
+                        color: AppColors.blanco,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text('Top 5 Productos del mes', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        Card(
+          elevation: 2,
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: top.length,
+            separatorBuilder: (c, i) => const Divider(height: 1),
+            itemBuilder: (context, i) {
+              final p = top[i];
+              return ListTile(
+                leading: CircleAvatar(child: Text('${i + 1}')),
+                title: Text(p['nombre'] ?? ''),
+                subtitle: Text('${p['categoria'] ?? ''}'),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('${p['unidades_vendidas']} uds.', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(CurrencyFormatter.cop(p['ingresos_totales'] ?? 0), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
         const SizedBox(height: 24),
         Row(
