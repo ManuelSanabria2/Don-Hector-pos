@@ -41,6 +41,17 @@ Future<void> main() async {
     if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
       await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
       print('Supabase initialized successfully.');
+      try {
+        final client = Supabase.instance.client;
+        if (client.auth.currentUser == null) {
+          await client.auth.signInAnonymously();
+          print('Supabase Auth: Signed in anonymously successfully.');
+        } else {
+          print('Supabase Auth: Already signed in as: ${client.auth.currentUser?.id}');
+        }
+      } catch (e) {
+        print('Supabase Auth: Anonymous sign-in failed or is disabled: $e');
+      }
     } else {
       print('Supabase credentials are empty!');
     }

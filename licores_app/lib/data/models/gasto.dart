@@ -9,6 +9,7 @@ class Gasto {
     this.categoriaId,
     this.notas,
     this.createdAt,
+    this.anulado = false,
   });
 
   final String id;
@@ -18,6 +19,7 @@ class Gasto {
   final DateTime fecha;
   final String? notas;
   final DateTime? createdAt;
+  final bool anulado;
 
   factory Gasto.fromJson(Map<String, dynamic> json) {
     return Gasto(
@@ -28,6 +30,7 @@ class Gasto {
       fecha: parseRequiredDate(json['fecha']),
       notas: json['notas'] as String?,
       createdAt: parseDateTime(json['created_at']),
+      anulado: json['anulado'] as bool? ?? false,
     );
   }
 
@@ -40,6 +43,7 @@ class Gasto {
       'fecha': dateOnly(fecha),
       'notas': notas,
       'created_at': createdAt?.toIso8601String(),
+      'anulado': anulado,
     };
   }
 }

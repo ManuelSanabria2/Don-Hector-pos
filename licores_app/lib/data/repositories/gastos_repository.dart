@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/categoria_gasto.dart';
 import '../models/gasto.dart';
+import '../models/model_helpers.dart';
 import 'supabase_providers.dart';
 
 final gastosRepositoryProvider = Provider<GastosRepository>((ref) {
@@ -27,14 +28,14 @@ class GastosRepository {
     DateTime? hasta,
     String? categoriaId,
   }) async {
-    var query = _client.from('gastos').select();
+    var query = _client.from('gastos').select().eq('anulado', false);
 
     if (desde != null) {
-      query = query.gte('fecha', desde.toUtc().toIso8601String());
+      query = query.gte('fecha', dateOnly(desde)!);
     }
 
     if (hasta != null) {
-      query = query.lte('fecha', hasta.toUtc().toIso8601String());
+      query = query.lte('fecha', dateOnly(hasta)!);
     }
 
     if (categoriaId != null) {
@@ -52,7 +53,7 @@ class GastosRepository {
   }
 
   Future<void> deleteGasto(String id) async {
-    await _client.from('gastos').delete().eq('id', id);
+    await _client.from('gastos').update({'anulado': true}).eq('id', id);
   }
 }
 

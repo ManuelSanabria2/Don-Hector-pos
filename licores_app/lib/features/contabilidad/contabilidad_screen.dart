@@ -80,11 +80,28 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
   }
 
   Future<void> _confirmarEliminarVenta(BuildContext context, String ventaId) async {
+    final TextEditingController motivoController = TextEditingController();
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar Factura'),
-        content: const Text('¿Estás seguro de eliminar esta venta? El registro se borrará permanentemente y el stock será restaurado.'),
+        title: const Text('Anular Venta'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('¿Estás seguro de anular esta venta? El stock de los productos asociados será restaurado.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: motivoController,
+              decoration: const InputDecoration(
+                labelText: 'Motivo de la anulación (opcional)',
+                hintText: 'Ej. Error de digitación, devolución',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -93,7 +110,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar'),
+            child: const Text('Anular Venta'),
           ),
         ],
       ),
@@ -101,7 +118,11 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
 
     if (confirm == true && context.mounted) {
       try {
-        await ref.read(contabilidadRepositoryProvider).eliminarVenta(ventaId);
+        final motivo = motivoController.text.trim();
+        await ref.read(contabilidadRepositoryProvider).eliminarVenta(
+          ventaId,
+          motivo: motivo.isNotEmpty ? motivo : null,
+        );
         
         // Invalidate providers to refresh UI
         ref.invalidate(resumenHoyProvider);
@@ -112,15 +133,17 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen> {
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Venta eliminada exitosamente')),
+            const SnackBar(content: Text('Venta anulada exitosamente')),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al eliminar: $e')),
+            SnackBar(content: Text('Error al anular la venta: $e')),
           );
         }
+      } finally {
+        motivoController.dispose();
       }
     }
   }

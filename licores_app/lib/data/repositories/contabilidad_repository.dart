@@ -74,6 +74,7 @@ class ContabilidadRepository {
     final rows = await _client
         .from('gastos')
         .select('monto')
+        .eq('anulado', false)
         .gte('fecha', start.toUtc().toIso8601String())
         .lte('fecha', end.toUtc().toIso8601String());
     return rows.fold<num>(0, (sum, row) => sum + ((row['monto'] as num?) ?? 0));
@@ -129,8 +130,11 @@ class ContabilidadRepository {
     return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 
-  Future<void> eliminarVenta(String id) async {
-    await _client.rpc('eliminar_venta', params: {'p_venta_id': id});
+  Future<void> eliminarVenta(String id, {String? motivo}) async {
+    await _client.rpc('anular_venta', params: {
+      'p_venta_id': id,
+      'p_motivo': motivo,
+    });
   }
 
   Future<Map<String, num>> getVentasPorMetodoPagoRango(DateTime start, DateTime end) async {
