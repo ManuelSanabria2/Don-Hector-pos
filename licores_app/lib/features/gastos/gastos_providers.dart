@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/categoria_gasto.dart';
@@ -22,6 +23,19 @@ final gastosDelMesProvider = FutureProvider<List<Gasto>>((ref) async {
   return repo.getGastos(
     desde: startOfMonth,
     hasta: endOfMonth,
+    categoriaId: selectedCat,
+  );
+});
+
+final gastosPorRangoProvider = FutureProvider.family<List<Gasto>, DateTimeRange>((ref, range) async {
+  final repo = ref.watch(gastosRepositoryProvider);
+  final selectedCat = ref.watch(selectedCategoriaGastoProvider);
+  
+  final end = DateTime(range.end.year, range.end.month, range.end.day, 23, 59, 59);
+
+  return repo.getGastos(
+    desde: range.start,
+    hasta: end,
     categoriaId: selectedCat,
   );
 });

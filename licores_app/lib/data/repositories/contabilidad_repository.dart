@@ -132,5 +132,71 @@ class ContabilidadRepository {
   Future<void> eliminarVenta(String id) async {
     await _client.rpc('eliminar_venta', params: {'p_venta_id': id});
   }
+
+  Future<Map<String, num>> getVentasPorMetodoPagoRango(DateTime start, DateTime end) async {
+    final rows = await _client
+        .from('ventas')
+        .select('metodo_pago, total, tipo')
+        .eq('estado', 'completada')
+        .gte('fecha', start.toUtc().toIso8601String())
+        .lte('fecha', end.toUtc().toIso8601String());
+
+    num efectivo = 0;
+    num transferencias = 0;
+    num efectivoPublico = 0;
+    num transferenciasPublico = 0;
+
+    for (final row in rows) {
+      final total = row['total'] as num? ?? 0;
+      final metodo = row['metodo_pago'] as String? ?? '';
+      final tipo = row['tipo'] as String? ?? '';
+      
+      if (metodo == 'efectivo') {
+        efectivo += total;
+        if (tipo == 'publico') {
+          efectivoPublico += total;
+        }
+      } else {
+        transferencias += total;
+        if (tipo == 'publico') {
+          transferenciasPublico += total;
+        }
+      }
+    }
+
+    return {
+      'efectivo': efectivo,
+      'transferencias': transferencias,
+      'efectivo_publico': efectivoPublico,
+      'transferencias_publico': transferenciasPublico,
+    };
+  }
+
+  Future<Map<String, num>> getAbonosPorMetodoPagoRango(DateTime start, DateTime end) async {
+    final rows = await _client
+        .from('pagos_mayoristas')
+        .select('metodo_pago, monto')
+        .gte('fecha', start.toUtc().toIso8601String())
+        .lte('fecha', end.toUtc().toIso8601String());
+
+    num efectivo = 0;
+    num transferencias = 0;
+
+    for (final row in rows) {
+      final monto = row['monto'] as num? ?? 0;
+      final metodo = row['metodo_pago'] as String? ?? '';
+      
+      if (metodo == 'efectivo') {
+        efectivo += monto;
+      } else {
+        transferencias += monto;
+      }
+    }
+
+    return {
+      'efectivo': efectivo,
+      'transferencias': transferencias,
+    };
+  }
 }
 

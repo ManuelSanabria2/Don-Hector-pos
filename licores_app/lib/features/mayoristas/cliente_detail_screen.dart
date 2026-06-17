@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/app_routes.dart';
 import '../../core/constants/app_colors.dart';
@@ -10,6 +14,7 @@ import '../../data/models/cliente_mayorista.dart';
 import '../../data/models/cobro_mayorista.dart';
 import '../../data/models/venta_enums.dart';
 import '../../data/repositories/mayoristas_repository.dart';
+import '../pos/pos_receipt_pdf.dart';
 import 'mayoristas_providers.dart';
 
 class ClienteDetailScreen extends ConsumerWidget {
@@ -64,13 +69,108 @@ class ClienteDetailScreen extends ConsumerWidget {
   }
 }
 
-class _PedidosTab extends StatelessWidget {
+class _PedidosTab extends ConsumerWidget {
   const _PedidosTab({required this.cobros});
 
   final List<CobroMayorista> cobros;
 
+  Future<void> _compartirRecibo(BuildContext context, WidgetRef ref, String ventaId, String action) async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final repo = ref.read(mayoristasRepositoryProvider);
+      final receipt = await repo.getVentaConDetalles(ventaId);
+      
+      if (context.mounted) Navigator.of(context).pop(); // Dismiss loading
+
+      if (action == 'pdf') {
+        final pdfBytes = await PosReceiptPdf.build(receipt);
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/comprobante_${receipt.ventaId.substring(0, 8)}.pdf');
+        await file.writeAsBytes(pdfBytes);
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: 'Comprobante de Venta por ${CurrencyFormatter.cop(receipt.total)}',
+        );
+      } else if (action == 'image') {
+        final pdfBytes = await PosReceiptPdf.build(receipt);
+        final images = Printing.raster(pdfBytes, pages: [0], dpi: 200);
+        await for (final image in images) {
+          final pngBytes = await image.toPng();
+          final tempDir = await getTemporaryDirectory();
+          final file = File('${tempDir.path}/comprobante_${receipt.ventaId.substring(0, 8)}.png');
+          await file.writeAsBytes(pngBytes);
+          await Share.shareXFiles(
+            [XFile(file.path)],
+            text: 'Comprobante de Venta por ${CurrencyFormatter.cop(receipt.total)}',
+          );
+          break;
+        }
+      } else if (action == 'print') {
+        await Printing.layoutPdf(
+          onLayout: (_) => PosReceiptPdf.build(receipt),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Dismiss loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al procesar el recibo: $e')),
+        );
+      }
+    }
+  }
+
+  void _mostrarOpcionesRecibo(BuildContext context, WidgetRef ref, String ventaId) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFA131310),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf, color: Colors.redAccent),
+              title: const Text('Compartir PDF', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _compartirRecibo(context, ref, ventaId, 'pdf');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.image, color: Colors.blueAccent),
+              title: const Text('Compartir Imagen', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _compartirRecibo(context, ref, ventaId, 'image');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.print, color: Colors.tealAccent),
+              title: const Text('Imprimir', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _compartirRecibo(context, ref, ventaId, 'print');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (cobros.isEmpty) {
       return const Center(child: Text('Sin pedidos mayoristas'));
     }
@@ -89,7 +189,18 @@ class _PedidosTab extends StatelessWidget {
                   : DateFormatter.dateTime(cobro.createdAt!),
             ),
             subtitle: Text('Total ${CurrencyFormatter.cop(cobro.totalVenta)}'),
-            trailing: _EstadoCobroBadge(estado: cobro.estado),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _EstadoCobroBadge(estado: cobro.estado),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Compartir recibo',
+                  icon: const Icon(Icons.share, size: 20),
+                  onPressed: () => _mostrarOpcionesRecibo(context, ref, cobro.ventaId),
+                ),
+              ],
+            ),
           ),
         );
       },

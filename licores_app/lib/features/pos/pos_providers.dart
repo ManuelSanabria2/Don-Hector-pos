@@ -42,13 +42,14 @@ final posCartProvider =
     });
 
 class PosCartState {
-  const PosCartState({
-    this.items = const [],
+  PosCartState({
+    List<CarritoItem> items = const [],
     this.descuento = 0,
     this.metodoPago = MetodoPago.efectivo,
     this.tipoVenta = TipoVenta.publico,
     this.clienteId,
-  });
+  }) : items = List<CarritoItem>.from(items)
+         ..sort((a, b) => a.producto.nombre.toLowerCase().compareTo(b.producto.nombre.toLowerCase()));
 
   final List<CarritoItem> items;
   final num descuento;
@@ -90,7 +91,7 @@ class PosCartState {
 }
 
 class PosCartController extends StateNotifier<PosCartState> {
-  PosCartController() : super(const PosCartState());
+  PosCartController() : super(PosCartState());
 
   void addProduct(Producto producto, {int cantidad = 1}) {
     final index = state.items.indexWhere(
@@ -184,6 +185,6 @@ class PosCartController extends StateNotifier<PosCartState> {
   }
 
   void clear() {
-    state = const PosCartState();
+    state = PosCartState();
   }
 }

@@ -445,6 +445,8 @@ class CartItemTile extends ConsumerWidget {
     final categorias = ref.watch(inventarioCategoriasProvider).value ?? [];
     final isCerveza = item.producto.categoriaId != null &&
         categorias.any((c) => c.id == item.producto.categoriaId && c.nombre.toLowerCase() == 'cerveza');
+    final isAguardiente = item.producto.categoriaId != null &&
+        categorias.any((c) => c.id == item.producto.categoriaId && c.nombre.toLowerCase() == 'aguardiente');
 
     return Card(
       child: Padding(
@@ -497,6 +499,13 @@ class CartItemTile extends ConsumerWidget {
                   GreenRoundButton(
                     label: '+24',
                     onPressed: () => controller.increment(item.producto.id, cantidad: 24),
+                  ),
+                ],
+                if (isAguardiente) ...[
+                  const SizedBox(width: 8),
+                  GreenRoundButton(
+                    label: '+12',
+                    onPressed: () => controller.increment(item.producto.id, cantidad: 12),
                   ),
                 ],
                 const Spacer(),

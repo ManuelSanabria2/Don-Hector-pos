@@ -11,7 +11,7 @@ abstract final class CurrencyFormatter {
   static final NumberFormat _copNumberDec = NumberFormat.currency(
     locale: 'es_CO',
     symbol: '',
-    decimalDigits: 2,
+    decimalDigits: 3,
   );
 
   static String cop(num value) {
@@ -101,7 +101,7 @@ class CopInputFormatter extends TextInputFormatter {
         final decPart = txt.substring(commaIndex + 1);
         
         final formattedInt = intPart.isEmpty ? '0' : CurrencyFormatter.copNumberOnly(num.parse(intPart));
-        final truncatedDec = decPart.length > 2 ? decPart.substring(0, 2) : decPart;
+        final truncatedDec = decPart.length > 3 ? decPart.substring(0, 3) : decPart;
         
         final formatted = '$formattedInt,$truncatedDec';
         return TextEditingValue(

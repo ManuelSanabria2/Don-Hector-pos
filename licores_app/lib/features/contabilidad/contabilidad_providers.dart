@@ -55,11 +55,25 @@ final metricasMesProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final estadoCuenta = await repo.getEstadoCuentaMayoristas();
   final deudaPendiente = estadoCuenta.fold<num>(0, (sum, row) => sum + ((row['deuda_pendiente'] as num?) ?? 0));
 
+  final ventasPorMetodo = await repo.getVentasPorMetodoPagoRango(startOfMonth, endOfMonth);
+  final ventasEfectivoPublico = ventasPorMetodo['efectivo_publico'] ?? 0;
+  final transferenciasPublico = ventasPorMetodo['transferencias_publico'] ?? 0;
+
+  final abonosPorMetodo = await repo.getAbonosPorMetodoPagoRango(startOfMonth, endOfMonth);
+  final abonosEfectivo = abonosPorMetodo['efectivo'] ?? 0;
+  final abonosTransferencia = abonosPorMetodo['transferencias'] ?? 0;
+
+  final efectivoReal = ventasEfectivoPublico + abonosEfectivo - gastosMes;
+  final transferenciasMes = transferenciasPublico + abonosTransferencia;
+
   return {
     'ventas_mes': ventasMes,
     'gastos_mes': gastosMes,
     'utilidad_estimada': utilidadEstimada,
     'deuda_pendiente': deudaPendiente,
+    'ventas_efectivo_mes': ventasEfectivoPublico,
+    'transferencias_mes': transferenciasMes,
+    'efectivo_real': efectivoReal,
   };
 });
 

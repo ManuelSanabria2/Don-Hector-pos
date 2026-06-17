@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_routes.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../data/repositories/gastos_repository.dart';
 import 'gastos_providers.dart';
 
@@ -96,7 +97,8 @@ class GastosScreen extends ConsumerWidget {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('\$ ${NumberFormat('#,##0.00').format(gasto.monto)}',
+                           Text(
+                            CurrencyFormatter.cop(gasto.monto),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           IconButton(
@@ -137,7 +139,7 @@ class GastosScreen extends ConsumerWidget {
                     children: [
                       Text('Total:', style: Theme.of(context).textTheme.titleLarge),
                       Text(
-                        '\$ ${NumberFormat('#,##0.00').format(total)}',
+                        CurrencyFormatter.cop(total),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],

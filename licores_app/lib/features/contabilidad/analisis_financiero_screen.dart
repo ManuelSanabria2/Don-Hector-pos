@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../gastos/gastos_providers.dart';
 import 'contabilidad_providers.dart';
 
@@ -87,7 +88,6 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
     bool isHighlight = false,
     Color? highlightColor,
   }) {
-    final currency = NumberFormat('#,##0.00');
     final textColor = isHighlight
         ? (highlightColor ?? AppColors.verde)
         : (isPositive
@@ -106,7 +106,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
           ),
         ),
         Text(
-          '${isNegative ? "-" : (isPositive ? "+" : "")} \$ ${currency.format(value)}',
+          '${isNegative ? "-" : (isPositive ? "+" : "")} ${CurrencyFormatter.cop(value)}',
           style: TextStyle(
             color: textColor,
             fontSize: isHighlight ? 15 : 13,
@@ -123,7 +123,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
     final metricasMes = ref.watch(metricasMesProvider);
     final ventas7Dias = ref.watch(ventasUltimos7DiasProvider);
     final topProductos = ref.watch(topProductosMesProvider);
-    final gastosAsync = ref.watch(gastosDelMesProvider);
+    final gastosAsync = ref.watch(gastosPorRangoProvider(_dateRange));
     final categoriasAsync = ref.watch(categoriasGastoProvider);
     final valorInventario = ref.watch(valorInventarioProvider);
     final utilidadRango = ref.watch(utilidadRangoProvider(_dateRange));
@@ -142,8 +142,6 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
-    final currency = NumberFormat('#,##0.00');
 
     final hoy = resumenHoy.value ?? {};
     final dias7 = ventas7Dias.value ?? [];
@@ -221,7 +219,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '\$ ${currency.format(hoy['total_ventas'] ?? 0)}',
+                              CurrencyFormatter.cop(hoy['total_ventas'] ?? 0),
                               style: const TextStyle(
                                 color: AppColors.blanco,
                                 fontSize: 20,
@@ -252,7 +250,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '\$ ${currency.format(hoy['utilidad_hoy'] ?? 0)}',
+                              CurrencyFormatter.cop(hoy['utilidad_hoy'] ?? 0),
                               style: const TextStyle(
                                 color: AppColors.verde,
                                 fontSize: 20,
@@ -314,7 +312,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '\$ ${currency.format(inventarioData['total_costo'] ?? 0)}',
+                              CurrencyFormatter.cop(inventarioData['total_costo'] ?? 0),
                               style: const TextStyle(
                                 color: AppColors.blanco,
                                 fontSize: 18,
@@ -340,7 +338,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '\$ ${currency.format(inventarioData['total_venta'] ?? 0)}',
+                              CurrencyFormatter.cop(inventarioData['total_venta'] ?? 0),
                               style: const TextStyle(
                                 color: AppColors.blanco,
                                 fontSize: 18,
@@ -361,7 +359,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                         style: TextStyle(color: AppColors.blancoD, fontSize: 13),
                       ),
                       Text(
-                        '\$ ${currency.format(inventarioData['utilidad_potencial'] ?? 0)}',
+                        CurrencyFormatter.cop(inventarioData['utilidad_potencial'] ?? 0),
                         style: const TextStyle(
                           color: AppColors.verde,
                           fontSize: 14,
@@ -514,7 +512,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                             const TextStyle(color: AppColors.blancoD, fontSize: 11, fontWeight: FontWeight.normal),
                             children: [
                               TextSpan(
-                                text: '\$ ${currency.format(rod.toY)}',
+                                text: CurrencyFormatter.cop(rod.toY),
                                 style: const TextStyle(color: AppColors.ambar, fontSize: 13, fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -637,7 +635,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                                   style: const TextStyle(color: AppColors.rojo, fontSize: 13, fontWeight: FontWeight.bold),
                                 ),
                                 TextSpan(
-                                  text: '\$ ${currency.format(entry.value)}',
+                                  text: CurrencyFormatter.cop(entry.value),
                                   style: const TextStyle(color: AppColors.blanco, fontSize: 11),
                                 ),
                               ],
@@ -731,7 +729,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
               child: const SizedBox(
                 height: 100,
                 child: Center(
-                  child: Text('No hay gastos registrados en este mes.', style: TextStyle(color: AppColors.blancoD)),
+                  child: Text('No hay gastos registrados en este periodo.', style: TextStyle(color: AppColors.blancoD)),
                 ),
               ),
             ),
@@ -776,9 +774,9 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildPieLegend('Ventas Público', '\$ ${currency.format(hoy['ventas_publico'] ?? 0)}', AppColors.ambar),
+                          _buildPieLegend('Ventas Público', CurrencyFormatter.cop(hoy['ventas_publico'] ?? 0), AppColors.ambar),
                           const SizedBox(height: 16),
-                          _buildPieLegend('Ventas Mayorista', '\$ ${currency.format(hoy['ventas_mayorista'] ?? 0)}', AppColors.verde),
+                          _buildPieLegend('Ventas Mayorista', CurrencyFormatter.cop(hoy['ventas_mayorista'] ?? 0), AppColors.verde),
                         ],
                       ),
                     ),
@@ -829,7 +827,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                                   style: const TextStyle(color: AppColors.ambar, fontSize: 13, fontWeight: FontWeight.bold),
                                 ),
                                 TextSpan(
-                                  text: '\$ ${currency.format(p['ingresos_totales'] ?? 0)}',
+                                  text: CurrencyFormatter.cop(p['ingresos_totales'] ?? 0),
                                   style: const TextStyle(color: AppColors.blanco, fontSize: 11),
                                 ),
                               ],

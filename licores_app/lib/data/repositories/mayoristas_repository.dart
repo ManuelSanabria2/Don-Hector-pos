@@ -5,6 +5,9 @@ import '../models/cliente_mayorista.dart';
 import '../models/cobro_mayorista.dart';
 import '../models/pago_mayorista.dart';
 import '../models/venta_enums.dart';
+import '../models/producto.dart';
+import '../models/carrito_item.dart';
+import '../../features/pos/pos_receipt_pdf.dart';
 import 'supabase_providers.dart';
 
 final mayoristasRepositoryProvider = Provider<MayoristasRepository>((ref) {
@@ -111,6 +114,69 @@ class MayoristasRepository {
       );
       restante -= abono;
     }
+  }
+
+  Future<PosReceiptData> getVentaConDetalles(String ventaId) async {
+    final row = await _client
+        .from('ventas')
+        .select('''
+          id,
+          fecha,
+          subtotal,
+          descuento,
+          total,
+          metodo_pago,
+          clientes_mayoristas (
+            nombre
+          ),
+          detalle_ventas (
+            cantidad,
+            precio_unitario,
+            productos (
+              id,
+              nombre,
+              precio_publico,
+              precio_mayorista,
+              costo,
+              stock_actual,
+              stock_minimo,
+              categoria_id,
+              codigo_barras,
+              activo
+            )
+          )
+        ''')
+        .eq('id', ventaId)
+        .single();
+
+    final clienteNombre = (row['clientes_mayoristas'] as Map?)?['nombre'] as String?;
+    final metodoPago = MetodoPago.fromJson(row['metodo_pago'] as String);
+    final fecha = DateTime.parse(row['fecha'] as String);
+
+    final List<CarritoItem> items = [];
+    final detalles = row['detalle_ventas'] as List;
+    for (final det in detalles) {
+      final prodJson = det['productos'] as Map<String, dynamic>;
+      final producto = Producto.fromJson(prodJson);
+      final cantidad = det['cantidad'] as int;
+      final precioUnitario = det['precio_unitario'] as num;
+      items.add(CarritoItem(
+        producto: producto,
+        cantidad: cantidad,
+        precioUnitario: precioUnitario,
+      ));
+    }
+
+    return PosReceiptData(
+      ventaId: row['id'] as String,
+      fecha: fecha,
+      items: items,
+      subtotal: row['subtotal'] as num,
+      descuento: row['descuento'] as num,
+      total: row['total'] as num,
+      metodoPago: metodoPago,
+      clienteNombre: clienteNombre,
+    );
   }
 }
 

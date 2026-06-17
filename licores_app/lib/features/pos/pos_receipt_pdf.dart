@@ -38,6 +38,10 @@ class PosReceiptPdf {
         ? receipt.ventaId.substring(0, 8)
         : receipt.ventaId;
 
+    // Ordenar los productos alfabéticamente por nombre
+    final sortedItems = List<CarritoItem>.from(receipt.items)
+      ..sort((a, b) => a.producto.nombre.toLowerCase().compareTo(b.producto.nombre.toLowerCase()));
+
     // Cargar logo remove-bg desde assets
     pw.MemoryImage? logoImage;
     try {
@@ -74,7 +78,7 @@ class PosReceiptPdf {
                         child: pw.Image(logoImage, width: 80, height: 80),
                       ),
                     pw.Expanded(
-                      child: pw.Column(
+                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text(
@@ -102,7 +106,7 @@ class PosReceiptPdf {
                 pw.TableHelper.fromTextArray(
                   headers: ['Producto', 'Cant.', 'Unitario', 'Subtotal'],
                   data: [
-                    for (final item in receipt.items)
+                    for (final item in sortedItems)
                       [
                         item.producto.nombre,
                         item.cantidad.toString(),
@@ -115,6 +119,7 @@ class PosReceiptPdf {
                   headerDecoration: const pw.BoxDecoration(
                     color: PdfColor.fromInt(0xFFE8F2ED),
                   ),
+                  headerAlignment: pw.Alignment.center,
                   cellAlignment: pw.Alignment.centerLeft,
                   cellAlignments: {
                     1: pw.Alignment.centerRight,
