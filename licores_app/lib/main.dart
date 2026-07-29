@@ -15,6 +15,8 @@ import 'data/models/gasto.dart';
 import 'data/models/producto.dart';
 import 'features/gastos/gasto_form_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/compras/compras_screen.dart';
+import 'features/contabilidad/capital_screen.dart';
 import 'features/inventario/barcode_scanner_screen.dart';
 import 'features/inventario/producto_form_screen.dart';
 import 'features/mayoristas/cliente_detail_screen.dart';
@@ -108,6 +110,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           return GastoFormScreen(gasto: state.extra as Gasto?);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.compras,
+        name: 'compras',
+        builder: (context, state) => const ComprasScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.capital,
+        name: 'capital',
+        builder: (context, state) => const CapitalScreen(),
       ),
     ],
   );

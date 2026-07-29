@@ -6,4 +6,6 @@ abstract final class AppRoutes {
   static const clienteDetail = '/mayoristas/cliente';
   static const clienteForm = '/mayoristas/cliente/form';
   static const gastoForm = '/gastos/form';
+  static const compras = '/compras';
+  static const capital = '/capital';
 }

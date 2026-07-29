@@ -169,6 +169,11 @@ class PosCartController extends StateNotifier<PosCartState> {
     state = state.copyWith(
       tipoVenta: tipoVenta,
       clearCliente: tipoVenta == TipoVenta.publico,
+      // El crédito (fiado) solo aplica a ventas mayoristas.
+      metodoPago: tipoVenta == TipoVenta.publico &&
+              state.metodoPago == MetodoPago.credito
+          ? MetodoPago.efectivo
+          : state.metodoPago,
       items: [
         for (final item in state.items)
           item.copyWith(
@@ -188,3 +193,7 @@ class PosCartController extends StateNotifier<PosCartState> {
     state = PosCartState();
   }
 }
+
+final posTurboProductosProvider = FutureProvider.autoDispose<List<Producto>>((ref) {
+  return ref.watch(inventarioRepositoryProvider).getProductosTurbo();
+});

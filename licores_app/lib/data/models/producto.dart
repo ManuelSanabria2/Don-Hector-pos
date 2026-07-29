@@ -15,6 +15,8 @@ class Producto {
     this.imagenUrl,
     this.codigoBarras,
     this.activo,
+    this.enTurbo,
+    this.ordenTurbo,
     this.createdAt,
     this.updatedAt,
   });
@@ -32,6 +34,8 @@ class Producto {
   final String? imagenUrl;
   final String? codigoBarras;
   final bool? activo;
+  final bool? enTurbo;
+  final int? ordenTurbo;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -52,6 +56,8 @@ class Producto {
       imagenUrl: json['imagen_url'] as String?,
       codigoBarras: json['codigo_barras'] as String?,
       activo: json['activo'] as bool?,
+      enTurbo: json['en_turbo'] as bool?,
+      ordenTurbo: json['orden_turbo'] as int?,
       createdAt: parseDateTime(json['created_at']),
       updatedAt: parseDateTime(json['updated_at']),
     );
@@ -72,6 +78,8 @@ class Producto {
       'imagen_url': imagenUrl,
       'codigo_barras': codigoBarras,
       'activo': activo,
+      'en_turbo': enTurbo,
+      'orden_turbo': ordenTurbo,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

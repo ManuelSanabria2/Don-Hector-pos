@@ -19,7 +19,9 @@ enum MetodoPago {
   nequi('nequi'),
   daviplata('daviplata'),
   transferencia('transferencia'),
-  otro('otro');
+  otro('otro'),
+  // Solo válido en ventas mayoristas: la venta queda como cuenta por cobrar.
+  credito('credito');
 
   const MetodoPago(this.value);
 

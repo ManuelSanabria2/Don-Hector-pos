@@ -15,17 +15,24 @@ abstract final class CurrencyFormatter {
   );
 
   static String cop(num value) {
-    if (value % 1 != 0) {
-      return '\$ ${_copNumberDec.format(value).trim()}';
-    }
-    return '\$ ${_copNumber.format(value).trim()}';
+    final rounded = value.round();
+    return '\$ ${_copNumber.format(rounded).trim()}';
   }
 
   static String copNumberOnly(num value, {bool allowDecimals = false}) {
-    if (allowDecimals || value % 1 != 0) {
-      return _copNumberDec.format(value).trim();
+    if (allowDecimals) {
+      final valStr = value.toString();
+      if (valStr.contains('.')) {
+        final parts = valStr.split('.');
+        final intPart = num.parse(parts[0]);
+        final formattedInt = _copNumber.format(intPart).trim();
+        final decPart = parts[1];
+        return '$formattedInt,$decPart';
+      }
+      return _copNumber.format(value).trim();
     }
-    return _copNumber.format(value).trim();
+    final rounded = value.round();
+    return _copNumber.format(rounded).trim();
   }
 
   static num parseCop(String value) {
@@ -34,10 +41,12 @@ abstract final class CurrencyFormatter {
       final parts = clean.split(',');
       final intPart = parts[0].replaceAll('.', '');
       final decPart = parts.length > 1 ? parts[1] : '';
-      return double.tryParse('$intPart.$decPart') ?? 0;
+      final parsedDouble = double.tryParse('$intPart.$decPart') ?? 0;
+      return parsedDouble.round();
     } else {
       final digits = clean.replaceAll(RegExp(r'[^0-9]'), '');
-      return num.tryParse(digits) ?? 0;
+      final parsedNum = num.tryParse(digits) ?? 0;
+      return parsedNum.round();
     }
   }
 }
@@ -101,7 +110,7 @@ class CopInputFormatter extends TextInputFormatter {
         final decPart = txt.substring(commaIndex + 1);
         
         final formattedInt = intPart.isEmpty ? '0' : CurrencyFormatter.copNumberOnly(num.parse(intPart));
-        final truncatedDec = decPart.length > 3 ? decPart.substring(0, 3) : decPart;
+        final truncatedDec = decPart.length > 2 ? decPart.substring(0, 2) : decPart;
         
         final formatted = '$formattedInt,$truncatedDec';
         return TextEditingValue(

@@ -13,6 +13,20 @@ class ContabilidadRepository {
 
   final SupabaseClient _client;
 
+  /// Límite superior exclusivo para rangos por timestamptz: el inicio
+  /// del día siguiente a [end], para no perder el último segundo del día.
+  static DateTime _finExclusivo(DateTime end) {
+    return DateTime(end.year, end.month, end.day).add(const Duration(days: 1));
+  }
+
+  /// Efectivo que debería haber en caja, calculado en la base de datos:
+  /// conteo físico registrado en capital_negocio.fecha_corte más/menos
+  /// todos los flujos de efectivo posteriores.
+  Future<num> getEfectivoReal() async {
+    final result = await _client.rpc('calcular_efectivo_real');
+    return (result as num?) ?? 0;
+  }
+
   Future<Map<String, dynamic>> getResumenDia(DateTime fecha) async {
     final start = DateTime(fecha.year, fecha.month, fecha.day);
     final end = start.add(const Duration(days: 1));
@@ -71,13 +85,21 @@ class ContabilidadRepository {
     return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 
-  Future<num> getTotalGastosRango(DateTime start, DateTime end) async {
-    final rows = await _client
+  Future<num> getTotalGastosRango(
+    DateTime start,
+    DateTime end, {
+    String? metodoPago,
+  }) async {
+    var query = _client
         .from('gastos')
         .select('monto')
         .eq('anulado', false)
         .gte('fecha', dateOnly(start)!)
         .lte('fecha', dateOnly(end)!);
+    if (metodoPago != null) {
+      query = query.eq('metodo_pago', metodoPago);
+    }
+    final rows = await query;
     return rows.fold<num>(0, (sum, row) => sum + ((row['monto'] as num?) ?? 0));
   }
 
@@ -87,8 +109,19 @@ class ContabilidadRepository {
         .select('total')
         .eq('estado', 'completada')
         .gte('fecha', start.toUtc().toIso8601String())
-        .lte('fecha', end.toUtc().toIso8601String());
+        .lt('fecha', _finExclusivo(end).toUtc().toIso8601String());
     return rows.fold<num>(0, (sum, row) => sum + ((row['total'] as num?) ?? 0));
+  }
+
+  Future<num> getTotalComprasEfectivoRango(DateTime start, DateTime end) async {
+    final rows = await _client
+        .from('compras_inventario')
+        .select('total')
+        .eq('anulado', false)
+        .eq('metodo_pago', 'efectivo')
+        .gte('fecha', dateOnly(start)!)
+        .lte('fecha', dateOnly(end)!);
+    return rows.fold<num>(0, (sum, row) => sum + parseNum(row['total']));
   }
 
   Future<num> getCogsRango(DateTime start, DateTime end) async {
@@ -144,18 +177,21 @@ class ContabilidadRepository {
         .select('metodo_pago, total, tipo')
         .eq('estado', 'completada')
         .gte('fecha', start.toUtc().toIso8601String())
-        .lte('fecha', end.toUtc().toIso8601String());
+        .lt('fecha', _finExclusivo(end).toUtc().toIso8601String());
 
     num efectivo = 0;
     num transferencias = 0;
     num efectivoPublico = 0;
     num transferenciasPublico = 0;
+    // Desglose de transferencias al público por destino.
+    num nequiPublico = 0;
+    num bancolombiaPublico = 0;
 
     for (final row in rows) {
       final total = row['total'] as num? ?? 0;
       final metodo = row['metodo_pago'] as String? ?? '';
       final tipo = row['tipo'] as String? ?? '';
-      
+
       if (metodo == 'efectivo') {
         efectivo += total;
         if (tipo == 'publico') {
@@ -165,6 +201,11 @@ class ContabilidadRepository {
         transferencias += total;
         if (tipo == 'publico') {
           transferenciasPublico += total;
+          if (metodo == 'nequi') {
+            nequiPublico += total;
+          } else if (metodo == 'transferencia') {
+            bancolombiaPublico += total;
+          }
         }
       }
     }
@@ -174,6 +215,8 @@ class ContabilidadRepository {
       'transferencias': transferencias,
       'efectivo_publico': efectivoPublico,
       'transferencias_publico': transferenciasPublico,
+      'nequi_publico': nequiPublico,
+      'bancolombia_publico': bancolombiaPublico,
     };
   }
 
@@ -181,27 +224,47 @@ class ContabilidadRepository {
     final rows = await _client
         .from('pagos_mayoristas')
         .select('metodo_pago, monto')
+        .eq('anulado', false)
         .gte('fecha', start.toUtc().toIso8601String())
-        .lte('fecha', end.toUtc().toIso8601String());
+        .lt('fecha', _finExclusivo(end).toUtc().toIso8601String());
 
     num efectivo = 0;
     num transferencias = 0;
+    num nequi = 0;
+    num bancolombia = 0;
 
     for (final row in rows) {
       final monto = row['monto'] as num? ?? 0;
       final metodo = row['metodo_pago'] as String? ?? '';
-      
+
       if (metodo == 'efectivo') {
         efectivo += monto;
       } else {
         transferencias += monto;
+        if (metodo == 'nequi') {
+          nequi += monto;
+        } else if (metodo == 'transferencia') {
+          bancolombia += monto;
+        }
       }
     }
 
     return {
       'efectivo': efectivo,
       'transferencias': transferencias,
+      'nequi': nequi,
+      'bancolombia': bancolombia,
     };
+  }
+
+  Future<num> getDeudaTotalCompras() async {
+    final rows = await _client
+        .from('compras_inventario')
+        .select('valor_deuda')
+        .eq('anulado', false)
+        .eq('metodo_pago', 'credito');
+
+    return rows.fold<num>(0, (sum, row) => sum + parseNum(row['valor_deuda']));
   }
 }
 

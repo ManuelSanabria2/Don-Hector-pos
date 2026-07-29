@@ -1,4 +1,8 @@
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/categoria.dart';
@@ -96,6 +100,68 @@ class InventarioRepository {
     await _client.from('productos').delete().eq('id', id);
   }
 
+  Future<List<Producto>> getProductosTurbo() async {
+    final rows = await _client
+        .from('productos')
+        .select()
+        .eq('activo', true)
+        .eq('en_turbo', true)
+        .order('orden_turbo', ascending: true)
+        .order('nombre', ascending: true);
+    return rows.map(Producto.fromJson).toList();
+  }
+
+  Future<void> setProductoTurbo(String productoId, bool enTurbo) async {
+    await _client.rpc('set_producto_turbo', params: {
+      'p_producto_id': productoId,
+      'p_en_turbo': enTurbo,
+    });
+  }
+
+  Future<void> actualizarOrdenTurbo(List<String> idsEnOrden) async {
+    await _client.rpc('actualizar_orden_turbo', params: {
+      'p_ids': idsEnOrden,
+    });
+  }
+
+  /// Comprime la imagen, la sube a Storage y actualiza productos.imagen_url.
+  /// Devuelve la URL publica.
+  Future<String> subirImagenProducto({
+    required String productoId,
+    required Uint8List bytes,
+  }) async {
+    final jpgBytes = await compute(_comprimirImagen, bytes);
+
+    final urlAnterior = await _client
+        .from('productos')
+        .select('imagen_url')
+        .eq('id', productoId)
+        .maybeSingle();
+
+    final path = '$productoId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    await _client.storage.from('productos').uploadBinary(
+          path,
+          jpgBytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg'),
+        );
+
+    final url = _client.storage.from('productos').getPublicUrl(path);
+    await _client.from('productos').update({'imagen_url': url}).eq('id', productoId);
+
+    // Borrado best-effort del objeto anterior para no acumular huerfanos.
+    final vieja = urlAnterior?['imagen_url'] as String?;
+    const marcador = '/object/public/productos/';
+    final idx = vieja?.indexOf(marcador) ?? -1;
+    if (vieja != null && idx != -1) {
+      final oldPath = Uri.decodeComponent(vieja.substring(idx + marcador.length));
+      try {
+        await _client.storage.from('productos').remove([oldPath]);
+      } catch (_) {}
+    }
+
+    return url;
+  }
+
   Stream<List<Producto>> watchStockBajo() {
     return _client
         .from('productos')
@@ -113,4 +179,20 @@ class InventarioRepository {
 
 Map<String, dynamic> _withoutNulls(Map<String, dynamic> values) {
   return Map.fromEntries(values.entries.where((entry) => entry.value != null));
+}
+
+// Top-level para poder ejecutarse en un isolate via compute().
+Uint8List _comprimirImagen(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) return bytes;
+
+  const maxLado = 600;
+  img.Image imagen = decoded;
+  if (decoded.width > maxLado || decoded.height > maxLado) {
+    imagen = decoded.width >= decoded.height
+        ? img.copyResize(decoded, width: maxLado)
+        : img.copyResize(decoded, height: maxLado);
+  }
+
+  return Uint8List.fromList(img.encodeJpg(imagen, quality: 80));
 }

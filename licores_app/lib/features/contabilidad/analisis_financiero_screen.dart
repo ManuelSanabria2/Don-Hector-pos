@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../data/models/gasto.dart';
 import '../gastos/gastos_providers.dart';
 import 'contabilidad_providers.dart';
 
@@ -15,17 +16,27 @@ class AnalisisFinancieroScreen extends ConsumerStatefulWidget {
   ConsumerState<AnalisisFinancieroScreen> createState() => _AnalisisFinancieroScreenState();
 }
 
-class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScreen> {
+class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   late DateTimeRange _dateRange;
+  DateTime _dailyGastoDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     final now = DateTime.now();
     _dateRange = DateTimeRange(
       start: DateTime(now.year, now.month, 1),
       end: DateTime(now.year, now.month, now.day),
     );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Widget _buildPieLegend(String title, String value, Color color) {
@@ -127,6 +138,7 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
     final categoriasAsync = ref.watch(categoriasGastoProvider);
     final valorInventario = ref.watch(valorInventarioProvider);
     final utilidadRango = ref.watch(utilidadRangoProvider(_dateRange));
+    final gastosDiariosAsync = ref.watch(gastosDiariosAnalisisProvider(_dailyGastoDate));
 
     final isLoading = resumenHoy.isLoading ||
         metricasMes.isLoading ||
@@ -135,11 +147,49 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
         gastosAsync.isLoading ||
         categoriasAsync.isLoading ||
         valorInventario.isLoading ||
-        utilidadRango.isLoading;
+        utilidadRango.isLoading ||
+        gastosDiariosAsync.isLoading;
 
     if (isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (resumenHoy.hasError || metricasMes.hasError || valorInventario.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Análisis Financiero')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text(
+                  'Error al cargar el análisis',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${resumenHoy.error ?? metricasMes.error ?? valorInventario.error}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () {
+                    ref.invalidate(resumenHoyProvider);
+                    ref.invalidate(metricasMesProvider);
+                    ref.invalidate(valorInventarioProvider);
+                  },
+                  child: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -182,10 +232,29 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.analytics_outlined),
+              text: 'Análisis General',
+            ),
+            Tab(
+              icon: Icon(Icons.receipt_long_outlined),
+              text: 'Gastos Diarios',
+            ),
+          ],
+          indicatorColor: AppColors.ambar,
+          labelColor: AppColors.ambar,
+          unselectedLabelColor: AppColors.blancoD,
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: TabBarView(
+        controller: _tabController,
         children: [
+          ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
           // 0. RESUMEN DE HOY Y UTILIDAD DIARIA REAL
           Card(
             elevation: 0,
@@ -261,6 +330,95 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                             Text(
                               'Margen real: ${((hoy['utilidad_hoy'] ?? 0) / ((hoy['total_ventas'] ?? 1) > 0 ? (hoy['total_ventas'] ?? 1) : 1) * 100).toStringAsFixed(1)}%',
                               style: const TextStyle(color: AppColors.blancoD, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // COMPARISON CARD: SALES MINUS COGS VS SALES MINUS COGS AND EXPENSES
+          Card(
+            elevation: 0,
+            color: AppColors.superficie,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.borde, width: 1.5),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Resumen de Utilidad de Hoy',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.blanco,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Ventas menos Costo',
+                              style: TextStyle(color: AppColors.blancoD, fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              CurrencyFormatter.cop(
+                                ((hoy['total_ventas'] ?? 0) - (hoy['cogs_hoy'] ?? 0)),
+                              ),
+                              style: const TextStyle(
+                                color: AppColors.blanco,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Ventas: ${CurrencyFormatter.cop(hoy['total_ventas'] ?? 0)}\nCosto: ${CurrencyFormatter.cop(hoy['cogs_hoy'] ?? 0)}',
+                              style: const TextStyle(color: AppColors.blancoD, fontSize: 10, height: 1.3),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        height: 75,
+                        width: 1.5,
+                        color: AppColors.borde,
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Ventas menos Costo y Gastos',
+                              style: TextStyle(color: AppColors.blancoD, fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              CurrencyFormatter.cop(hoy['utilidad_hoy'] ?? 0),
+                              style: const TextStyle(
+                                color: AppColors.verde,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Gastos: ${CurrencyFormatter.cop(hoy['gastos_hoy'] ?? 0)}',
+                              style: const TextStyle(color: AppColors.blancoD, fontSize: 10),
                             ),
                           ],
                         ),
@@ -446,7 +604,16 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                   _buildAnalysisRow('(+) Ingresos por Ventas', rangeData['ventas'] ?? 0, isPositive: true),
                   const SizedBox(height: 8),
                   _buildAnalysisRow('(-) Costo de Productos (COGS)', rangeData['cogs'] ?? 0, isNegative: true),
-                  const SizedBox(height: 8),
+                  const Divider(color: Colors.white10, height: 16),
+                  _buildAnalysisRow(
+                    '(=) Subtotal (Ingresos - COGS)',
+                    ((rangeData['ventas'] ?? 0) - (rangeData['cogs'] ?? 0)).abs(),
+                    isPositive: ((rangeData['ventas'] ?? 0) - (rangeData['cogs'] ?? 0)) >= 0,
+                    isNegative: ((rangeData['ventas'] ?? 0) - (rangeData['cogs'] ?? 0)) < 0,
+                    isHighlight: true,
+                    highlightColor: AppColors.ambar,
+                  ),
+                  const Divider(color: Colors.white10, height: 16),
                   _buildAnalysisRow('(-) Gastos en el Periodo', rangeData['gastos'] ?? 0, isNegative: true),
                   const Divider(color: AppColors.borde, height: 24, thickness: 1.5),
                   _buildAnalysisRow(
@@ -807,7 +974,11 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
                   child: BarChart(
                     BarChartData(
                       alignment: BarChartAlignment.spaceAround,
-                      maxY: top.isEmpty ? 10 : top.map((e) => (e['unidades_vendidas'] as num?)?.toDouble() ?? 0.0).reduce((a, b) => a > b ? a : b) * 1.15,
+                      maxY: () {
+                        if (top.isEmpty) return 10.0;
+                        final maxVal = top.map((e) => (e['unidades_vendidas'] as num?)?.toDouble() ?? 0.0).reduce((a, b) => a > b ? a : b);
+                        return maxVal > 0 ? maxVal * 1.15 : 10.0;
+                      }(),
                       barTouchData: BarTouchData(
                         enabled: true,
                         touchTooltipData: BarTouchTooltipData(
@@ -926,6 +1097,207 @@ class _AnalisisFinancieroScreenState extends ConsumerState<AnalisisFinancieroScr
             ),
         ],
       ),
+      _buildGastosDiariosTab(context, gastosDiariosAsync.value ?? [], nombresCategorias, categoriasAsync.isLoading),
+    ],
+  ),
+);
+  }
+
+  Widget _buildGastosDiariosTab(
+    BuildContext context,
+    List<Gasto> dailyGastos,
+    Map<String, String> nombresCategorias,
+    bool isCategoriesLoading,
+  ) {
+    final totalDailyGastos = dailyGastos.fold<num>(0, (sum, g) => sum + g.monto);
+    final isToday = DateUtils.isSameDay(_dailyGastoDate, DateTime.now());
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          elevation: 0,
+          color: AppColors.superficie,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.borde, width: 1.5),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left, color: AppColors.blanco),
+                  onPressed: () {
+                    setState(() {
+                      _dailyGastoDate = _dailyGastoDate.subtract(const Duration(days: 1));
+                    });
+                  },
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.ambar),
+                  label: Text(
+                    DateFormat('EEEE, d ' 'de' ' MMMM ' 'de' ' yyyy', 'es').format(_dailyGastoDate),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.blanco,
+                    ),
+                  ),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _dailyGastoDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: ColorScheme.dark(
+                              primary: AppColors.ambar,
+                              onPrimary: Colors.black,
+                              surface: const Color(0xFA131310),
+                              onSurface: AppColors.blanco,
+                            ),
+                            dialogBackgroundColor: const Color(0xFA131310),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _dailyGastoDate = picked;
+                      });
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right, color: AppColors.blanco),
+                  onPressed: isToday
+                      ? null
+                      : () {
+                          setState(() {
+                            _dailyGastoDate = _dailyGastoDate.add(const Duration(days: 1));
+                          });
+                        },
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          elevation: 0,
+          color: AppColors.superficie,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.borde, width: 1.5),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Total Gastado en el Día',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.blancoD,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  CurrencyFormatter.cop(totalDailyGastos),
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.rojo,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        if (dailyGastos.isEmpty) ...[
+          const SizedBox(height: 40),
+          const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.receipt_long_outlined, size: 64, color: AppColors.blancoD),
+                SizedBox(height: 16),
+                Text(
+                  'No hay gastos registrados para este día.',
+                  style: TextStyle(color: AppColors.blancoD, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4.0),
+            child: Text(
+              'Detalle de Gastos',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: AppColors.blanco,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: dailyGastos.length,
+            itemBuilder: (context, index) {
+              final gasto = dailyGastos[index];
+              final catName = nombresCategorias[gasto.categoriaId] ?? 'Sin Categoría';
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                elevation: 0,
+                color: AppColors.superficie,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.borde, width: 1.5),
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.rojo.withOpacity(0.1),
+                      child: const Icon(Icons.arrow_downward, color: AppColors.rojo, size: 20),
+                    ),
+                    title: Text(
+                      gasto.descripcion,
+                      style: const TextStyle(
+                        color: AppColors.blanco,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Text(
+                      catName,
+                      style: const TextStyle(
+                        color: AppColors.blancoD,
+                        fontSize: 12,
+                      ),
+                    ),
+                    trailing: Text(
+                      CurrencyFormatter.cop(gasto.monto),
+                      style: const TextStyle(
+                        color: AppColors.rojo,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ],
     );
   }
 }

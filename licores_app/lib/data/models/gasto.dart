@@ -10,6 +10,7 @@ class Gasto {
     this.notas,
     this.createdAt,
     this.anulado = false,
+    this.metodoPago = 'efectivo',
   });
 
   final String id;
@@ -20,6 +21,7 @@ class Gasto {
   final String? notas;
   final DateTime? createdAt;
   final bool anulado;
+  final String metodoPago;
 
   factory Gasto.fromJson(Map<String, dynamic> json) {
     return Gasto(
@@ -31,6 +33,7 @@ class Gasto {
       notas: json['notas'] as String?,
       createdAt: parseDateTime(json['created_at']),
       anulado: json['anulado'] as bool? ?? false,
+      metodoPago: json['metodo_pago'] as String? ?? 'efectivo',
     );
   }
 
@@ -44,6 +47,7 @@ class Gasto {
       'notas': notas,
       'created_at': createdAt?.toIso8601String(),
       'anulado': anulado,
+      'metodo_pago': metodoPago,
     };
   }
 }

@@ -115,10 +115,12 @@ class ProductTile extends ConsumerWidget {
         enabled: !disabled,
         onTap: disabled
             ? null
-            : () => ref.read(posCartProvider.notifier).addProduct(
-                  producto,
-                  cantidad: 1,
-                ),
+            : () {
+                ref.read(posCartProvider.notifier).addProduct(
+                      producto,
+                      cantidad: 1,
+                    );
+              },
         title: Text(producto.nombre),
         subtitle: Text(
           '${CurrencyFormatter.cop(producto.precioPublico)} · Stock ${producto.stockActual}',

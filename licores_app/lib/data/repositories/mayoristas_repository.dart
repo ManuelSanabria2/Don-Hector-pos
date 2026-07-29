@@ -42,6 +42,7 @@ class MayoristasRepository {
         .from('cobros_mayoristas')
         .select()
         .eq('cliente_id', clienteId)
+        .eq('anulado', false)
         .order('created_at', ascending: false);
     return rows.map(CobroMayorista.fromJson).toList();
   }
@@ -57,10 +58,12 @@ class MayoristasRepository {
           productos (nombre, categorias(nombre)),
           ventas!inner (
             fecha,
-            cliente_id
+            cliente_id,
+            estado
           )
         ''')
         .eq('ventas.cliente_id', clienteId)
+        .eq('ventas.estado', 'completada')
         .order('created_at', ascending: false);
     return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }

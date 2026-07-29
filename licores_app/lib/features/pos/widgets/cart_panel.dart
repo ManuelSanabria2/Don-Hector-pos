@@ -292,11 +292,12 @@ class _CartPanelState extends ConsumerState<CartPanel> {
               return ListTile(
                 title: const Text('Metodo de pago'),
                 subtitle: Text(
-                  cart.metodoPago == MetodoPago.efectivo
-                      ? 'Efectivo'
-                      : cart.metodoPago == MetodoPago.nequi
-                          ? 'Nequi'
-                          : 'Bancolombia',
+                  switch (cart.metodoPago) {
+                    MetodoPago.efectivo => 'Efectivo',
+                    MetodoPago.nequi => 'Nequi',
+                    MetodoPago.credito => 'Crédito (fiado)',
+                    _ => 'Bancolombia',
+                  },
                   style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
                 ),
                 trailing: const Icon(Icons.arrow_drop_down),
@@ -337,6 +338,14 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                         const PopupMenuItem(
                           value: MetodoPago.transferencia,
                           child: Text('Bancolombia'),
+                        ),
+                      // Solo mayoristas pueden llevar fiado: la venta queda
+                      // como cuenta por cobrar en vez de pagada al instante.
+                      if (cart.tipoVenta == TipoVenta.mayorista &&
+                          cart.metodoPago != MetodoPago.credito)
+                        const PopupMenuItem(
+                          value: MetodoPago.credito,
+                          child: Text('Crédito (fiado)'),
                         ),
                     ],
                   ).then((value) {

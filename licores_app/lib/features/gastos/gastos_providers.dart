@@ -39,3 +39,22 @@ final gastosPorRangoProvider = FutureProvider.family<List<Gasto>, DateTimeRange>
     categoriaId: selectedCat,
   );
 });
+
+final gastosDiariosProvider = FutureProvider.autoDispose.family<List<Gasto>, DateTime>((ref, date) async {
+  final repo = ref.watch(gastosRepositoryProvider);
+  final selectedCat = ref.watch(selectedCategoriaGastoProvider);
+  return repo.getGastos(
+    desde: date,
+    hasta: date,
+    categoriaId: selectedCat,
+  );
+});
+
+final gastosDiariosAnalisisProvider = FutureProvider.autoDispose.family<List<Gasto>, DateTime>((ref, date) async {
+  final repo = ref.watch(gastosRepositoryProvider);
+  return repo.getGastos(
+    desde: date,
+    hasta: date,
+  );
+});
+

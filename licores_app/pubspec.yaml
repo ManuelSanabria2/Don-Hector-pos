@@ -49,6 +49,11 @@ dependencies:
   speech_to_text: ^7.4.0
   flutter_tts: ^4.2.5
   http: ^1.6.0
+  image_picker: ^1.2.1
+  reorderable_grid_view: ^2.2.8
+  image: ^4.5.4
+  audioplayers: ^6.1.0
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +72,7 @@ flutter:
   assets:
     - assets/videos/
     - assets/images/
+    - assets/sounds/
     - .env
 
   # To add custom fonts to your application, add a fonts section here,

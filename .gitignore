@@ -11,3 +11,6 @@ licores_app/.env.example
 licores_app/build/
 licores_app/.dart_tool/
 licores_app/.flutter-plugins-dependencies
+
+# Ignore generated knowledge-graph output
+graphify-out/

@@ -9,144 +9,190 @@ import '../../shared/widgets/app_shell_bar.dart';
 import '../contabilidad/contabilidad_providers.dart';
 import '../contabilidad/contabilidad_screen.dart';
 import '../gastos/gastos_screen.dart';
+import '../compras/compras_screen.dart';
 import '../inventario/inventario_screen.dart';
 import '../mayoristas/mayoristas_screen.dart';
 import '../pos/pos_screen.dart';
+import '../pos/pos_turbo_screen.dart';
+import '../pos/widgets/logo_intro_overlay.dart';
 import '../pos/widgets/assistant_aura_animation.dart';
 
 final homeTabIndexProvider = StateProvider<int>((ref) => 0);
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
-  static const _screens = [
-    _DashboardView(),
-    InventarioScreen(),
-    PosScreen(),
-    MayoristasScreen(),
-    GastosScreen(),
-    ContabilidadScreen(),
-  ];
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _showTurboOverlay = false;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final selectedIndex = ref.watch(homeTabIndexProvider);
     final isDesktop = MediaQuery.of(context).size.width >= 800;
     final colors = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppShellBar(
-        title: AppStrings.businessName,
+    final screens = [
+      _DashboardView(
+        onTurboActivated: () {
+          setState(() {
+            _showTurboOverlay = true;
+          });
+        },
       ),
-      floatingActionButton: selectedIndex == 0
-          ? FloatingActionButton(
-              onPressed: () => showAssistantDialog(context),
-              backgroundColor: colors.primary,
-              child: const Icon(Icons.graphic_eq, color: Colors.white),
-            )
-          : null,
-      body: Row(
-        children: [
-          if (isDesktop)
-            NavigationRail(
-              selectedIndex: selectedIndex,
-              useIndicator: false,
-              indicatorColor: Colors.transparent,
-              onDestinationSelected: (index) {
-                ref.read(homeTabIndexProvider.notifier).state = index;
-              },
-              labelType: NavigationRailLabelType.all,
-              selectedIconTheme: IconThemeData(color: colors.primary),
-              selectedLabelTextStyle: TextStyle(
-                color: colors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-              destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard),
-                  label: Text('Inicio'),
+      const InventarioScreen(),
+      const PosScreen(),
+      const MayoristasScreen(),
+      const GastosScreen(),
+      const ComprasScreen(),
+      const ContabilidadScreen(),
+    ];
+
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppShellBar(
+            title: AppStrings.businessName,
+          ),
+          floatingActionButton: selectedIndex == 0
+              ? FloatingActionButton(
+                  onPressed: () => showAssistantDialog(context),
+                  backgroundColor: colors.primary,
+                  child: const Icon(Icons.graphic_eq, color: Colors.white),
+                )
+              : null,
+          body: Row(
+            children: [
+              if (isDesktop)
+                NavigationRail(
+                  selectedIndex: selectedIndex,
+                  useIndicator: false,
+                  indicatorColor: Colors.transparent,
+                  onDestinationSelected: (index) {
+                    ref.read(homeTabIndexProvider.notifier).state = index;
+                  },
+                  labelType: NavigationRailLabelType.all,
+                  selectedIconTheme: IconThemeData(color: colors.primary),
+                  selectedLabelTextStyle: TextStyle(
+                    color: colors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.dashboard_outlined),
+                      selectedIcon: Icon(Icons.dashboard),
+                      label: Text('Inicio'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.inventory_2_outlined),
+                      selectedIcon: Icon(Icons.inventory_2),
+                      label: Text('Inventario'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.point_of_sale_outlined),
+                      selectedIcon: Icon(Icons.point_of_sale),
+                      label: Text('VENTA'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.storefront_outlined),
+                      selectedIcon: Icon(Icons.storefront),
+                      label: Text('Mayoristas'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.receipt_long_outlined),
+                      selectedIcon: Icon(Icons.receipt_long),
+                      label: Text('Gastos'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.shopping_cart_outlined),
+                      selectedIcon: Icon(Icons.shopping_cart),
+                      label: Text('Compras'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.bar_chart_outlined),
+                      selectedIcon: Icon(Icons.bar_chart),
+                      label: Text('Contabilidad'),
+                    ),
+                  ],
                 ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  selectedIcon: Icon(Icons.inventory_2),
-                  label: Text('Inventario'),
+              Expanded(child: screens[selectedIndex]),
+            ],
+          ),
+          bottomNavigationBar: isDesktop
+              ? null
+              : BottomNavigationBar(
+                  currentIndex: selectedIndex,
+                  onTap: (index) {
+                    ref.read(homeTabIndexProvider.notifier).state = index;
+                  },
+                  type: BottomNavigationBarType.fixed,
+                  selectedItemColor: colors.primary,
+                  unselectedItemColor: colors.onSurface.withOpacity(0.85),
+                  showUnselectedLabels: true,
+                  items: const [
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.dashboard_outlined),
+                      activeIcon: Icon(Icons.dashboard),
+                      label: 'Inicio',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.inventory_2_outlined),
+                      activeIcon: Icon(Icons.inventory_2),
+                      label: 'Inventario',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.point_of_sale_outlined),
+                      activeIcon: Icon(Icons.point_of_sale),
+                      label: 'VENTA',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.storefront_outlined),
+                      activeIcon: Icon(Icons.storefront),
+                      label: 'Mayoristas',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.receipt_long_outlined),
+                      activeIcon: Icon(Icons.receipt_long),
+                      label: 'Gastos',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.shopping_cart_outlined),
+                      activeIcon: Icon(Icons.shopping_cart),
+                      label: 'Compras',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.bar_chart_outlined),
+                      activeIcon: Icon(Icons.bar_chart),
+                      label: 'Contabilidad',
+                    ),
+                  ],
                 ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.point_of_sale_outlined),
-                  selectedIcon: Icon(Icons.point_of_sale),
-                  label: Text('VENTA'),
+        ),
+        if (_showTurboOverlay)
+          LogoIntroOverlay(
+            onFinished: () {
+              setState(() {
+                _showTurboOverlay = false;
+              });
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PosTurboScreen(),
                 ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.storefront_outlined),
-                  selectedIcon: Icon(Icons.storefront),
-                  label: Text('Mayoristas'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  selectedIcon: Icon(Icons.receipt_long),
-                  label: Text('Gastos'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  selectedIcon: Icon(Icons.bar_chart),
-                  label: Text('Contabilidad'),
-                ),
-              ],
-            ),
-          Expanded(child: _screens[selectedIndex]),
-        ],
-      ),
-      bottomNavigationBar: isDesktop
-          ? null
-          : BottomNavigationBar(
-              currentIndex: selectedIndex,
-              onTap: (index) {
-                ref.read(homeTabIndexProvider.notifier).state = index;
-              },
-              type: BottomNavigationBarType.fixed,
-              selectedItemColor: colors.primary,
-              unselectedItemColor: colors.onSurface.withOpacity(0.85),
-              showUnselectedLabels: true,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.dashboard_outlined),
-                  activeIcon: Icon(Icons.dashboard),
-                  label: 'Inicio',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  activeIcon: Icon(Icons.inventory_2),
-                  label: 'Inventario',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.point_of_sale_outlined),
-                  activeIcon: Icon(Icons.point_of_sale),
-                  label: 'VENTA',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.storefront_outlined),
-                  activeIcon: Icon(Icons.storefront),
-                  label: 'Mayoristas',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  activeIcon: Icon(Icons.receipt_long),
-                  label: 'Gastos',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.bar_chart_outlined),
-                  activeIcon: Icon(Icons.bar_chart),
-                  label: 'Contabilidad',
-                ),
-              ],
-            ),
+              );
+            },
+          ),
+      ],
     );
   }
 }
 
 class _DashboardView extends ConsumerWidget {
-  const _DashboardView();
+  const _DashboardView({required this.onTurboActivated});
+
+  final VoidCallback onTurboActivated;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -338,6 +384,64 @@ class _DashboardView extends ConsumerWidget {
         ),
       ),
     ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTurboActivated,
+                  borderRadius: BorderRadius.circular(24),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFA131310),
+                      border: Border.all(color: const Color(0xFF262626)),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        Container(
+                          color: AppColors.ambar.withOpacity(0.25),
+                          padding: const EdgeInsets.all(12),
+                          child: const Icon(
+                            Icons.bolt,
+                            color: AppColors.ambar,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Modo Turbo POS',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.ambar,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Ventas ultra-rápidas para fila de clientes',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios, color: AppColors.ambar, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

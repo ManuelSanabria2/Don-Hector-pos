@@ -172,5 +172,6 @@ String _metodoPagoLabel(MetodoPago metodoPago) {
     MetodoPago.daviplata => 'Daviplata',
     MetodoPago.transferencia => 'Transferencia',
     MetodoPago.otro => 'Otro',
+    MetodoPago.credito => 'Crédito (fiado)',
   };
 }

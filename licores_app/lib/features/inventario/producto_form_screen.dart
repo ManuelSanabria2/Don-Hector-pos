@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_routes.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../data/models/categoria.dart';
@@ -207,11 +208,129 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     }
   }
 
-  void _stripDecimals(TextEditingController controller) {
-    final text = controller.text;
+  void _mostrarCalculadoraCostoUnitario(BuildContext context) {
+    final precioLoteController = TextEditingController();
+    final cantidadLoteController = TextEditingController();
+    double resultado = 0.0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            void calcular() {
+              final precioStr = precioLoteController.text.replaceAll('.', '').replaceAll(',', '.');
+              final precio = double.tryParse(precioStr) ?? 0.0;
+              final cantidad = int.tryParse(cantidadLoteController.text) ?? 0;
+              if (cantidad > 0) {
+                setState(() {
+                  resultado = precio / cantidad;
+                });
+              } else {
+                setState(() {
+                  resultado = 0.0;
+                });
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF131310),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Color(0xFF262626)),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.calculate_outlined, color: AppColors.ambar),
+                  SizedBox(width: 8),
+                  Text('Costo Unitario', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Calcula el costo por unidad dividiendo el precio de compra del lote por la cantidad de unidades.',
+                    style: TextStyle(color: AppColors.blancoD, fontSize: 12.5),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: precioLoteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Precio del lote / paquete',
+                      prefixText: '\$ ',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [CopInputFormatter(allowDecimals: false)],
+                    onChanged: (_) => calcular(),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: cantidadLoteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Unidades en el lote',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (_) => calcular(),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF24282F),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Costo Unitario Calculado:',
+                          style: TextStyle(color: AppColors.blancoD, fontSize: 11),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          CurrencyFormatter.cop(resultado),
+                          style: const TextStyle(
+                            color: AppColors.verde,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                ),
+                FilledButton(
+                  onPressed: resultado > 0
+                      ? () {
+                          _costoController.text = CurrencyFormatter.copNumberOnly(resultado, allowDecimals: true);
+                          Navigator.pop(ctx);
+                        }
+                      : null,
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.ambar),
+                  child: const Text('Aplicar Costo'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _stripDecimals(String text) {
     if (text.contains(',')) {
-      controller.text = text.split(',')[0];
+      return text.split(',')[0];
     }
+    return text;
   }
 
   @override
@@ -222,7 +341,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
       (c) => c.id == _categoriaId,
       orElse: () => const Categoria(id: '', nombre: ''),
     );
-    final isCerveza = selectedCategory.nombre.toLowerCase().trim() == 'cerveza';
+    final isCerveza = selectedCategory.nombre.toLowerCase() == 'cerveza';
 
     return Scaffold(
       appBar: AppBar(
@@ -275,17 +394,17 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                   onChanged: (value) {
                     setState(() {
                       _categoriaId = value;
-                      final selected = items.firstWhere(
-                        (c) => c.id == value,
-                        orElse: () => const Categoria(id: '', nombre: ''),
-                      );
-                      final isNewCerveza = selected.nombre.toLowerCase().trim() == 'cerveza';
-                      if (!isNewCerveza) {
-                        _stripDecimals(_precioPublicoController);
-                        _stripDecimals(_precioMayoristaController);
-                        _stripDecimals(_costoController);
-                      }
                     });
+                    final newSelected = items.firstWhere(
+                      (c) => c.id == value,
+                      orElse: () => const Categoria(id: '', nombre: ''),
+                    );
+                    final isNewCerveza = newSelected.nombre.toLowerCase() == 'cerveza';
+                    if (!isNewCerveza) {
+                      _precioPublicoController.text = _stripDecimals(_precioPublicoController.text);
+                      _precioMayoristaController.text = _stripDecimals(_precioMayoristaController.text);
+                      _costoController.text = _stripDecimals(_costoController.text);
+                    }
                   },
                 ),
               ),
@@ -298,9 +417,6 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Ingresa el precio público';
                   }
-                  if (!isCerveza && value.contains(',')) {
-                    return 'No se permiten decimales para esta categoría';
-                  }
                   return null;
                 },
               ),
@@ -312,9 +428,6 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Ingresa el precio mayorista';
-                  }
-                  if (!isCerveza && value.contains(',')) {
-                    return 'No se permiten decimales para esta categoría';
                   }
                   final mayorista = CurrencyFormatter.parseCop(
                     _precioMayoristaController.text,
@@ -331,12 +444,16 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                 controller: _costoController,
                 label: 'Costo',
                 allowDecimals: isCerveza,
+                suffixIcon: isCerveza
+                    ? IconButton(
+                        icon: const Icon(Icons.calculate_outlined, color: AppColors.ambar),
+                        tooltip: 'Calcular costo unitario',
+                        onPressed: () => _mostrarCalculadoraCostoUnitario(context),
+                      )
+                    : null,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Ingresa el costo';
-                  }
-                  if (!isCerveza && value.contains(',')) {
-                    return 'No se permiten decimales para esta categoría';
                   }
                   return null;
                 },
@@ -420,12 +537,14 @@ class _MoneyField extends StatelessWidget {
     required this.label,
     this.validator,
     this.allowDecimals = false,
+    this.suffixIcon,
   });
 
   final TextEditingController controller;
   final String label;
   final FormFieldValidator<String>? validator;
   final bool allowDecimals;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -434,6 +553,7 @@ class _MoneyField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         prefixText: '\$ ',
+        suffixIcon: suffixIcon,
       ),
       keyboardType: TextInputType.numberWithOptions(decimal: allowDecimals),
       inputFormatters: [CopInputFormatter(allowDecimals: allowDecimals)],

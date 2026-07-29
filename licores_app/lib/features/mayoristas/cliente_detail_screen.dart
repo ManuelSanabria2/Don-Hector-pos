@@ -415,8 +415,8 @@ class _RegistrarPagoSheetState extends ConsumerState<_RegistrarPagoSheet> {
                 labelText: 'Monto',
                 prefixText: '\$ ',
               ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [CopInputFormatter()],
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [CopInputFormatter(allowDecimals: true)],
               validator: (value) {
                 final monto = CurrencyFormatter.parseCop(value ?? '');
                 if (monto <= 0) return 'Ingresa un monto valido';

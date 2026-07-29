@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/utils/currency_formatter.dart';
 import '../../data/models/gasto.dart';
 import '../../data/repositories/gastos_repository.dart';
 import 'gastos_providers.dart';
@@ -22,6 +23,14 @@ class _GastoFormScreenState extends ConsumerState<GastoFormScreen> {
   late TextEditingController _notasCtrl;
   String? _categoriaId;
   late DateTime _fecha;
+  late String _metodoPago;
+
+  static const _metodosPago = {
+    'efectivo': 'Efectivo',
+    'nequi': 'Nequi',
+    'transferencia': 'Bancolombia',
+    'otro': 'Otro',
+  };
 
   bool _isLoading = false;
 
@@ -29,10 +38,15 @@ class _GastoFormScreenState extends ConsumerState<GastoFormScreen> {
   void initState() {
     super.initState();
     _descripcionCtrl = TextEditingController(text: widget.gasto?.descripcion);
-    _montoCtrl = TextEditingController(text: widget.gasto?.monto.toString());
+    _montoCtrl = TextEditingController(
+      text: widget.gasto == null
+          ? ''
+          : CurrencyFormatter.copNumberOnly(widget.gasto!.monto, allowDecimals: false),
+    );
     _notasCtrl = TextEditingController(text: widget.gasto?.notas);
     _categoriaId = widget.gasto?.categoriaId;
     _fecha = widget.gasto?.fecha ?? DateTime.now();
+    _metodoPago = widget.gasto?.metodoPago ?? 'efectivo';
   }
 
   @override
@@ -61,10 +75,11 @@ class _GastoFormScreenState extends ConsumerState<GastoFormScreen> {
       final gasto = Gasto(
         id: widget.gasto?.id ?? '',
         descripcion: _descripcionCtrl.text.trim(),
-        monto: num.parse(_montoCtrl.text.trim()),
+        monto: CurrencyFormatter.parseCop(_montoCtrl.text),
         categoriaId: _categoriaId,
         fecha: _fecha,
         notas: _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim(),
+        metodoPago: _metodoPago,
       );
 
       await repo.upsertGasto(gasto);
@@ -113,10 +128,12 @@ class _GastoFormScreenState extends ConsumerState<GastoFormScreen> {
                       labelText: 'Monto (COP)',
                       prefixText: '\$ ',
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [CopInputFormatter(allowDecimals: false)],
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Requerido';
-                      if (num.tryParse(v) == null) return 'Número inválido';
+                      final val = CurrencyFormatter.parseCop(v);
+                      if (val <= 0) return 'Monto inválido';
                       return null;
                     },
                   ),
@@ -131,6 +148,22 @@ class _GastoFormScreenState extends ConsumerState<GastoFormScreen> {
                       );
                     }).toList(),
                     onChanged: (val) => setState(() => _categoriaId = val),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Método de pago',
+                      helperText: 'Solo los gastos en efectivo descuentan de la caja',
+                    ),
+                    value: _metodoPago,
+                    items: _metodosPago.entries.map((e) {
+                      return DropdownMenuItem(
+                        value: e.key,
+                        child: Text(e.value),
+                      );
+                    }).toList(),
+                    onChanged: (val) =>
+                        setState(() => _metodoPago = val ?? 'efectivo'),
                   ),
                   const SizedBox(height: 16),
                   ListTile(
