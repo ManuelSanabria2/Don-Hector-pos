@@ -48,6 +48,7 @@ class PosCartState {
     this.metodoPago = MetodoPago.efectivo,
     this.tipoVenta = TipoVenta.publico,
     this.clienteId,
+    this.deudorNombre,
   }) : items = List<CarritoItem>.from(items)
          ..sort((a, b) => a.producto.nombre.toLowerCase().compareTo(b.producto.nombre.toLowerCase()));
 
@@ -56,6 +57,14 @@ class PosCartState {
   final MetodoPago metodoPago;
   final TipoVenta tipoVenta;
   final String? clienteId;
+
+  /// A quién se le fía, en ventas al público a crédito. No hay ficha de
+  /// cliente: es solo el nombre escrito en el momento.
+  final String? deudorNombre;
+
+  /// La venta es un fiado informal: público + crédito.
+  bool get esFiadoPublico =>
+      tipoVenta == TipoVenta.publico && metodoPago == MetodoPago.credito;
 
   num get subtotal => items.fold<num>(0, (sum, item) => sum + item.subtotal);
 
@@ -69,7 +78,10 @@ class PosCartState {
   bool get canSubmit {
     return items.isNotEmpty &&
         total > 0 &&
-        (tipoVenta == TipoVenta.publico || clienteId != null);
+        (tipoVenta == TipoVenta.publico || clienteId != null) &&
+        // Un fiado sin nombre no se puede cobrar después; la base
+        // también lo rechaza.
+        (!esFiadoPublico || (deudorNombre?.trim().isNotEmpty ?? false));
   }
 
   PosCartState copyWith({
@@ -78,7 +90,9 @@ class PosCartState {
     MetodoPago? metodoPago,
     TipoVenta? tipoVenta,
     String? clienteId,
+    String? deudorNombre,
     bool clearCliente = false,
+    bool clearDeudor = false,
   }) {
     return PosCartState(
       items: items ?? this.items,
@@ -86,6 +100,7 @@ class PosCartState {
       metodoPago: metodoPago ?? this.metodoPago,
       tipoVenta: tipoVenta ?? this.tipoVenta,
       clienteId: clearCliente ? null : clienteId ?? this.clienteId,
+      deudorNombre: clearDeudor ? null : deudorNombre ?? this.deudorNombre,
     );
   }
 }
@@ -162,18 +177,24 @@ class PosCartController extends StateNotifier<PosCartState> {
   }
 
   void setMetodoPago(MetodoPago metodoPago) {
-    state = state.copyWith(metodoPago: metodoPago);
+    state = state.copyWith(
+      metodoPago: metodoPago,
+      // El nombre del deudor solo tiene sentido mientras la venta sea fiada.
+      clearDeudor: metodoPago != MetodoPago.credito,
+    );
+  }
+
+  void setDeudorNombre(String? deudorNombre) {
+    state = state.copyWith(deudorNombre: deudorNombre);
   }
 
   void setTipoVenta(TipoVenta tipoVenta) {
     state = state.copyWith(
       tipoVenta: tipoVenta,
       clearCliente: tipoVenta == TipoVenta.publico,
-      // El crédito (fiado) solo aplica a ventas mayoristas.
-      metodoPago: tipoVenta == TipoVenta.publico &&
-              state.metodoPago == MetodoPago.credito
-          ? MetodoPago.efectivo
-          : state.metodoPago,
+      // Al pasar a mayorista el fiado deja de identificarse por nombre
+      // suelto: la deuda queda a cargo del cliente seleccionado.
+      clearDeudor: tipoVenta == TipoVenta.mayorista,
       items: [
         for (final item in state.items)
           item.copyWith(

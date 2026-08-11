@@ -31,7 +31,13 @@ class ClienteDetailScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(cliente.nombre),
+          // Dos líneas y algo más pequeño: los nombres largos se cortaban.
+          title: Text(
+            cliente.nombre,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 17),
+          ),
           actions: [
             IconButton(
               tooltip: 'Editar',

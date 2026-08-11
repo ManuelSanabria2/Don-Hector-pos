@@ -8,6 +8,9 @@ import 'package:printing/printing.dart';
 import 'contabilidad_providers.dart';
 import 'analisis_financiero_screen.dart';
 import 'capital_screen.dart';
+import 'fiados_screen.dart';
+import 'prestamos_screen.dart';
+import 'utilidad_producto_tab.dart';
 import '../mayoristas/mayoristas_providers.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
@@ -26,10 +29,17 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
   late TabController _tabController;
   DateTime _selectedDate = DateTime.now();
 
+  /// Rango de la lista de facturas. Es independiente de [_selectedDate], que
+  /// sigue controlando las métricas del día y el PDF.
+  late DateTimeRange _facturasRange;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    final hoy = DateTime.now();
+    final dia = DateTime(hoy.year, hoy.month, hoy.day);
+    _facturasRange = DateTimeRange(start: dia, end: dia);
   }
 
   @override
@@ -601,6 +611,200 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
     );
   }
 
+  bool _esRangoDeUnDia() {
+    final inicio = _facturasRange.start;
+    final fin = _facturasRange.end;
+    return inicio.year == fin.year &&
+        inicio.month == fin.month &&
+        inicio.day == fin.day;
+  }
+
+  String _rangoFacturasTexto() {
+    final formato = DateFormat('dd/MM/yyyy');
+    if (_esRangoDeUnDia()) {
+      return formato.format(_facturasRange.start);
+    }
+    return '${formato.format(_facturasRange.start)} - ${formato.format(_facturasRange.end)}';
+  }
+
+  String _tituloFacturas() {
+    final hoy = DateTime.now();
+    final inicio = _facturasRange.start;
+    final esHoy = _esRangoDeUnDia() &&
+        inicio.year == hoy.year &&
+        inicio.month == hoy.month &&
+        inicio.day == hoy.day;
+    if (esHoy) return 'Facturas del día';
+    return 'Facturas del ${_rangoFacturasTexto()}';
+  }
+
+  Future<void> _seleccionarRangoFacturas() async {
+    final rango = await showDateRangePicker(
+      context: context,
+      initialDateRange: _facturasRange,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: AppColors.ambar,
+              onPrimary: Colors.black,
+              surface: const Color(0xFA131310), // 98% opacidad oscura
+              onSurface: AppColors.blanco,
+            ),
+            dialogBackgroundColor: const Color(0xFA131310), // Fondo de ventana oscuro
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (rango != null) {
+      setState(() {
+        _facturasRange = rango;
+      });
+    }
+  }
+
+  Future<void> _mostrarItemsVenta(
+    BuildContext context,
+    String ventaId,
+    String clienteNombre,
+    num totalVenta,
+  ) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFA131310),
+        title: Text('Items de la venta · $clienteNombre'),
+        content: SizedBox(
+          width: 460,
+          child: Consumer(
+            builder: (context, ref, _) {
+              final items = ref.watch(itemsVentaProvider(ventaId));
+              return items.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (error, _) => Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'No se pudieron cargar los items: $error',
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                ),
+                data: (lista) {
+                  if (lista.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('Esta venta no tiene items registrados.'),
+                    );
+                  }
+
+                  final sumaItems = lista.fold<num>(
+                    0,
+                    (suma, item) => suma + ((item['subtotal'] as num?) ?? 0),
+                  );
+
+                  return SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildFilaItem(
+                          nombre: 'Producto',
+                          cantidad: 'Cant.',
+                          precioUnitario: 'P. Unit.',
+                          total: 'Total',
+                          esEncabezado: true,
+                        ),
+                        const Divider(height: 12),
+                        for (final item in lista)
+                          _buildFilaItem(
+                            nombre: (item['productos'] as Map?)?['nombre'] as String? ??
+                                'Producto eliminado',
+                            cantidad: '${(item['cantidad'] as num?)?.toInt() ?? 0}',
+                            precioUnitario:
+                                CurrencyFormatter.cop(item['precio_unitario'] ?? 0),
+                            total: CurrencyFormatter.cop(item['subtotal'] ?? 0),
+                          ),
+                        const Divider(height: 12),
+                        _buildFilaItem(
+                          nombre: 'TOTAL',
+                          cantidad: '',
+                          precioUnitario: '',
+                          total: CurrencyFormatter.cop(sumaItems),
+                          esEncabezado: true,
+                        ),
+                        if (sumaItems != totalVenta) ...[
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              'Total facturado con descuento: '
+                              '${CurrencyFormatter.cop(totalVenta)}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.blancoD,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilaItem({
+    required String nombre,
+    required String cantidad,
+    required String precioUnitario,
+    required String total,
+    bool esEncabezado = false,
+  }) {
+    final estilo = TextStyle(
+      color: esEncabezado ? AppColors.blanco : AppColors.blancoD,
+      fontWeight: esEncabezado ? FontWeight.bold : FontWeight.normal,
+      fontSize: 13,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(nombre, style: estilo, overflow: TextOverflow.ellipsis),
+          ),
+          Expanded(
+            flex: 1,
+            child: Text(cantidad, style: estilo, textAlign: TextAlign.right),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(precioUnitario, style: estilo, textAlign: TextAlign.right),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(total, style: estilo, textAlign: TextAlign.right),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _confirmarEliminarVenta(BuildContext context, String ventaId) async {
     final TextEditingController motivoController = TextEditingController();
 
@@ -655,7 +859,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
         ref.invalidate(metricasMesProvider);
         ref.invalidate(ventasUltimos7DiasProvider);
         ref.invalidate(topProductosMesProvider);
-        ref.invalidate(ventasPorDiaProvider);
+        ref.invalidate(ventasPorRangoProvider);
         ref.invalidate(mayoristasClientesProvider);
         ref.invalidate(clienteCobrosProvider);
         ref.invalidate(clienteVentasProductosProvider);
@@ -753,14 +957,14 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
     final metricasDia = ref.watch(metricasDiaProvider(_selectedDate));
     final ventas7Dias = ref.watch(ventasUltimos7DiasProvider);
     final topProductos = ref.watch(topProductosMesProvider);
-    final ventasHoy = ref.watch(ventasPorDiaProvider(_selectedDate));
+    final facturas = ref.watch(ventasPorRangoProvider(_facturasRange));
     final metricasMes = ref.watch(metricasMesProvider);
     final valorInventario = ref.watch(valorInventarioProvider);
 
     final isLoading = metricasDia.isLoading || 
         ventas7Dias.isLoading || 
         topProductos.isLoading || 
-        ventasHoy.isLoading ||
+        facturas.isLoading ||
         metricasMes.isLoading ||
         valorInventario.isLoading;
 
@@ -775,13 +979,13 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
         valorInventario.hasError ||
         ventas7Dias.hasError ||
         topProductos.hasError ||
-        ventasHoy.hasError) {
+        facturas.hasError) {
       final error = metricasDia.error ?? 
           metricasMes.error ?? 
           valorInventario.error ?? 
           ventas7Dias.error ?? 
           topProductos.error ?? 
-          ventasHoy.error;
+          facturas.error;
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -808,7 +1012,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
                   ref.invalidate(valorInventarioProvider);
                   ref.invalidate(ventasUltimos7DiasProvider);
                   ref.invalidate(topProductosMesProvider);
-                  ref.invalidate(ventasPorDiaProvider(_selectedDate));
+                  ref.invalidate(ventasPorRangoProvider(_facturasRange));
                 },
                 child: const Text('Reintentar'),
               ),
@@ -820,7 +1024,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
 
     final dia = metricasDia.value ?? {};
     final top = topProductos.value ?? [];
-    final ventasHoyList = ventasHoy.value ?? [];
+    final facturasList = facturas.value ?? [];
     final mes = metricasMes.value ?? {};
     final inventario = valorInventario.value ?? {};
 
@@ -836,6 +1040,10 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
             Tab(
               icon: Icon(Icons.trending_up_outlined),
               text: 'Métricas Avanzadas',
+            ),
+            Tab(
+              icon: Icon(Icons.insights_outlined),
+              text: 'Utilidad x Producto',
             ),
           ],
           indicatorColor: AppColors.ambar,
@@ -853,7 +1061,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
                   ref.invalidate(valorInventarioProvider);
                   ref.invalidate(ventasUltimos7DiasProvider);
                   ref.invalidate(topProductosMesProvider);
-                  ref.invalidate(ventasPorDiaProvider(_selectedDate));
+                  ref.invalidate(ventasPorRangoProvider(_facturasRange));
                 },
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -943,6 +1151,36 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FiadosScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.handshake_outlined),
+                  label: const Text('Fiados'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PrestamosScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.request_quote_outlined),
+                  label: const Text('Préstamos'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
                 FilledButton.icon(
                   onPressed: () => _exportarPdf(dia, top),
                   icon: const Icon(Icons.picture_as_pdf),
@@ -999,6 +1237,18 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
                   CurrencyFormatter.cop(dia['deuda_pendiente'] ?? 0),
                   Icons.warning_amber,
                   Colors.orange,
+                ),
+                _buildMetricCard(
+                  'Fiados Pendientes',
+                  CurrencyFormatter.cop(dia['fiados_pendiente'] ?? 0),
+                  Icons.handshake_outlined,
+                  Colors.deepOrange,
+                ),
+                _buildMetricCard(
+                  'Préstamos por Pagar',
+                  CurrencyFormatter.cop(dia['prestamos_pendiente'] ?? 0),
+                  Icons.request_quote_outlined,
+                  Colors.purple,
                 ),
                 _buildMetricCard(
                   'Deuda',
@@ -1077,58 +1327,30 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
           children: [
             Expanded(
               child: Text(
-                _selectedDate.day == DateTime.now().day && _selectedDate.month == DateTime.now().month && _selectedDate.year == DateTime.now().year 
-                  ? 'Facturas del día' 
-                  : 'Facturas del ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
+                _tituloFacturas(),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
             TextButton.icon(
               icon: const Icon(Icons.calendar_month),
-              label: const Text('Elegir fecha'),
-              onPressed: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: _selectedDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
-                  builder: (context, child) {
-                    return Theme(
-                      data: Theme.of(context).copyWith(
-                        colorScheme: ColorScheme.dark(
-                          primary: AppColors.ambar,
-                          onPrimary: Colors.black,
-                          surface: const Color(0xFA131310), // 98% opacidad oscura
-                          onSurface: AppColors.blanco,
-                        ),
-                        dialogBackgroundColor: const Color(0xFA131310), // Fondo de ventana oscuro
-                      ),
-                      child: child!,
-                    );
-                  },
-                );
-                if (date != null) {
-                  setState(() {
-                    _selectedDate = date;
-                  });
-                }
-              },
+              label: const Text('Filtrar fechas'),
+              onPressed: _seleccionarRangoFacturas,
             ),
           ],
         ),
         const SizedBox(height: 8),
-        if (ventasHoyList.isEmpty)
-          Center(child: Text('No hay facturas registradas el ${DateFormat('dd/MM/yyyy').format(_selectedDate)}'))
+        if (facturasList.isEmpty)
+          Center(child: Text('No hay facturas registradas en ${_rangoFacturasTexto()}'))
         else
           Card(
             elevation: 2,
             child: ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: ventasHoyList.length,
+              itemCount: facturasList.length,
               separatorBuilder: (c, i) => const Divider(height: 1),
               itemBuilder: (context, i) {
-                final venta = ventasHoyList[i];
+                final venta = facturasList[i];
                 final fecha = venta['fecha'] as String?;
                 final total = venta['total'] as num? ?? 0;
                 final metodoPago = venta['metodo_pago'] as String? ?? '';
@@ -1148,7 +1370,8 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
                       ),
                       const Spacer(),
                       Text(
-                        DateFormat('HH:mm').format(fecha != null ? DateTime.parse(fecha).toLocal() : DateTime.now()),
+                        DateFormat(_esRangoDeUnDia() ? 'HH:mm' : 'dd/MM HH:mm')
+                            .format(fecha != null ? DateTime.parse(fecha).toLocal() : DateTime.now()),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppColors.blancoD,
                             ),
@@ -1182,9 +1405,25 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
                       ),
                     ],
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _confirmarEliminarVenta(context, venta['id'].toString()),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.visibility_outlined, color: AppColors.ambar),
+                        tooltip: 'Ver items',
+                        onPressed: () => _mostrarItemsVenta(
+                          context,
+                          venta['id'].toString(),
+                          clienteNombre,
+                          total,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        tooltip: 'Anular venta',
+                        onPressed: () => _confirmarEliminarVenta(context, venta['id'].toString()),
+                      ),
+                    ],
                   ),
                   isThreeLine: true,
                 );
@@ -1212,6 +1451,7 @@ class _ContabilidadScreenState extends ConsumerState<ContabilidadScreen>
     ),
     ),
     _buildMetricasAvanzadasTab(context, mes, inventario),
+    const UtilidadProductoTab(),
   ],
 ),
 ),

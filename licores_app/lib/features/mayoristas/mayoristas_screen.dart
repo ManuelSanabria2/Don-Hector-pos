@@ -113,7 +113,7 @@ class _MayoristasScreenState extends ConsumerState<MayoristasScreen> {
                   for (final item in conDeuda)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: _ClienteCard(item: item),
+                      child: ClienteCard(item: item),
                     ),
                   if (conDeuda.isNotEmpty && sinDeuda.isNotEmpty)
                     const Padding(
@@ -139,7 +139,7 @@ class _MayoristasScreenState extends ConsumerState<MayoristasScreen> {
                   for (final item in sinDeuda)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: _ClienteCard(item: item),
+                      child: ClienteCard(item: item),
                     ),
                 ],
               );
@@ -156,8 +156,8 @@ class _MayoristasScreenState extends ConsumerState<MayoristasScreen> {
   }
 }
 
-class _ClienteCard extends StatelessWidget {
-  const _ClienteCard({required this.item});
+class ClienteCard extends StatelessWidget {
+  const ClienteCard({super.key, required this.item});
 
   final ClienteConCuenta item;
 
@@ -179,41 +179,58 @@ class _ClienteCard extends StatelessWidget {
           foregroundColor: hasDebt ? colors.primary : colors.onPrimary,
           child: Text(item.cliente.nombre.characters.first.toUpperCase()),
         ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                item.cliente.nombre,
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: hasDebt ? FontWeight.bold : null,
-                ),
-              ),
-            ),
-            if (hasDebt)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  'Cobro pendiente',
-                  style: TextStyle(
-                    color: colors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
+        // El nombre ocupa el ancho completo: los de los clientes reales
+        // llegan a más de 30 caracteres y antes competían con el chip.
+        title: Text(
+          item.cliente.nombre,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: textColor,
+            fontWeight: hasDebt ? FontWeight.bold : null,
+          ),
         ),
-        subtitle: Text(
-          hasDebt
-              ? 'Debe ${CurrencyFormatter.cop(item.deudaPendiente)}'
-              : 'Sin deuda pendiente',
-          style: TextStyle(color: subColor),
-        ),
+        subtitle: hasDebt
+            ? Padding(
+                padding: const EdgeInsets.only(top: 4),
+                // Wrap y no Row: en pantallas angostas el chip baja de
+                // línea en vez de apretar el monto.
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Debe ${CurrencyFormatter.cop(item.deudaPendiente)}',
+                      style: TextStyle(
+                        color: subColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        'Cobro pendiente',
+                        style: TextStyle(
+                          color: colors.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Text(
+                'Sin deuda pendiente',
+                style: TextStyle(color: subColor),
+              ),
+        isThreeLine: hasDebt,
         trailing: Icon(
           Icons.chevron_right,
           color: textColor,

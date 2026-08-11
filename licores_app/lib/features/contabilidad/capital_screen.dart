@@ -224,20 +224,32 @@ class _CapitalScreenState extends ConsumerState<CapitalScreen> {
                     final gastosHist = resumen['total_gastos_historico'] ?? 0;
                     final invAct = resumen['valor_inventario_actual'] ?? 0;
                     final patEst = resumen['patrimonio_estimado'] ?? 0;
+                    final deudaPrestamos = resumen['deuda_prestamos'] ?? 0;
+                    final dineroDisponible = resumen['dinero_disponible'] ?? 0;
+                    final porCobrar = resumen['cuentas_por_cobrar'] ?? 0;
+                    final deudaProveedores = resumen['deuda_proveedores'] ?? 0;
 
                     final isPositivo = patEst >= 0;
 
+                    // Lo que el negocio TIENE menos lo que DEBE. Estas filas
+                    // suman exactamente el patrimonio de abajo.
                     return Column(
                       children: [
-                        _buildRowItem('Capital Inicial Total (Efectivo + Inv.)', capIniTot, Colors.white70),
+                        _buildRowItem('Dinero disponible (+)', dineroDisponible, AppColors.verde),
                         const SizedBox(height: 8),
-                        _buildRowItem('Ventas Históricas (+)', ventasHist, AppColors.verde),
-                        const SizedBox(height: 8),
-                        _buildRowItem('Compras de Inventario Históricas (-)', comprasHist, Colors.redAccent),
-                        const SizedBox(height: 8),
-                        _buildRowItem('Gastos Operativos Históricos (-)', gastosHist, Colors.redAccent),
-                        const SizedBox(height: 8),
-                        _buildRowItem('Valor del Inventario Actual', invAct, AppColors.ambar),
+                        _buildRowItem('Valor del Inventario Actual (+)', invAct, AppColors.verde),
+                        if (porCobrar > 0) ...[
+                          const SizedBox(height: 8),
+                          _buildRowItem('Le deben a usted (+)', porCobrar, AppColors.verde),
+                        ],
+                        if (deudaProveedores > 0) ...[
+                          const SizedBox(height: 8),
+                          _buildRowItem('Deuda con Proveedores (-)', deudaProveedores, Colors.redAccent),
+                        ],
+                        if (deudaPrestamos > 0) ...[
+                          const SizedBox(height: 8),
+                          _buildRowItem('Préstamos por Pagar (-)', deudaPrestamos, Colors.redAccent),
+                        ],
                         const SizedBox(height: 16),
                         Card(
                           color: isPositivo
@@ -278,10 +290,38 @@ class _CapitalScreenState extends ConsumerState<CapitalScreen> {
                         const Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            '* El patrimonio estimado es una aproximación. No reemplaza una auditoría contable formal.',
+                            '* Lo que el negocio tiene hoy menos lo que debe. Es una '
+                            'aproximación y no reemplaza una auditoría contable formal.',
                             style: TextStyle(color: Colors.white38, fontSize: 11, fontStyle: FontStyle.italic),
                           ),
                         ),
+                        const SizedBox(height: 24),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Actividad Histórica',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Acumulados desde el inicio. Son referencia de actividad, no '
+                            'componentes del patrimonio de arriba.',
+                            style: TextStyle(color: Colors.white38, fontSize: 11, fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildRowItem('Capital Inicial Registrado', capIniTot, Colors.white70),
+                        const SizedBox(height: 8),
+                        _buildRowItem('Ventas Históricas', ventasHist, Colors.white70),
+                        const SizedBox(height: 8),
+                        _buildRowItem('Compras de Inventario Históricas', comprasHist, Colors.white70),
+                        const SizedBox(height: 8),
+                        _buildRowItem('Gastos Operativos Históricos', gastosHist, Colors.white70),
                       ],
                     );
                   },

@@ -21,6 +21,7 @@ class PosRepository {
     String? clienteId,
     num descuento = 0,
     String? notas,
+    String? deudorNombre,
   }) async {
     final result = await _client.rpc(
       'registrar_venta',
@@ -31,6 +32,8 @@ class PosRepository {
         'p_descuento': descuento,
         'p_notas': notas,
         'p_items': items.map((item) => item.toJson()).toList(),
+        // Solo se usa en fiados al público; la base lo exige en ese caso.
+        'p_deudor_nombre': deudorNombre,
       },
     );
 

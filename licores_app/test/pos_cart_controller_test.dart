@@ -99,5 +99,49 @@ void main() {
       expect(state.clienteId, isNull);
       expect(state.tipoVenta, equals(TipoVenta.publico));
     });
+
+    test('Fiado al publico exige el nombre del deudor', () {
+      final controller = PosCartController();
+      controller.addProduct(testProduct, cantidad: 1);
+      controller.setMetodoPago(MetodoPago.credito);
+
+      expect(controller.state.esFiadoPublico, isTrue);
+      // Sin nombre no se puede cobrar despues, asi que no deja registrar.
+      expect(controller.state.canSubmit, isFalse);
+
+      controller.setDeudorNombre('   ');
+      expect(controller.state.canSubmit, isFalse);
+
+      controller.setDeudorNombre('Juan');
+      expect(controller.state.canSubmit, isTrue);
+    });
+
+    test('El nombre del deudor se limpia al dejar de ser fiado', () {
+      final controller = PosCartController();
+      controller.addProduct(testProduct, cantidad: 1);
+      controller.setMetodoPago(MetodoPago.credito);
+      controller.setDeudorNombre('Juan');
+
+      controller.setMetodoPago(MetodoPago.efectivo);
+      expect(controller.state.deudorNombre, isNull);
+      expect(controller.state.esFiadoPublico, isFalse);
+      expect(controller.state.canSubmit, isTrue);
+    });
+
+    test('Pasar a mayorista descarta el deudor informal', () {
+      final controller = PosCartController();
+      controller.addProduct(testProduct, cantidad: 1);
+      controller.setMetodoPago(MetodoPago.credito);
+      controller.setDeudorNombre('Juan');
+
+      controller.setTipoVenta(TipoVenta.mayorista);
+      expect(controller.state.deudorNombre, isNull);
+      expect(controller.state.esFiadoPublico, isFalse);
+      // Una venta mayorista sigue exigiendo cliente.
+      expect(controller.state.canSubmit, isFalse);
+
+      controller.setCliente('cliente-abc');
+      expect(controller.state.canSubmit, isTrue);
+    });
   });
 }

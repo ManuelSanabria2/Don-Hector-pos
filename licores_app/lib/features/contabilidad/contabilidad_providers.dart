@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/models/producto.dart';
+import '../../data/models/utilidad_producto.dart';
 import '../../data/repositories/contabilidad_repository.dart';
 import '../../data/repositories/inventario_repository.dart';
 import '../../data/repositories/compras_repository.dart';
+import '../../data/repositories/prestamos_repository.dart';
 
 final resumenHoyProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final repo = ref.watch(contabilidadRepositoryProvider);
@@ -50,6 +53,33 @@ final utilidadRangoProvider = FutureProvider.autoDispose
   };
 });
 
+/// Cuántos días atrás mira la utilidad por producto (hoy incluido).
+const int diasSemanaUtilidad = 7;
+
+/// Productos que el usuario eligió para ver su utilidad semanal.
+final utilidadProductosSeleccionadosProvider =
+    StateProvider<List<Producto>>((ref) => const []);
+
+/// Rango de la semana: los últimos [diasSemanaUtilidad] días, hoy incluido.
+DateTimeRange rangoSemanaUtilidad([DateTime? hoy]) {
+  final ahora = hoy ?? DateTime.now();
+  final fin = DateTime(ahora.year, ahora.month, ahora.day);
+  return DateTimeRange(
+    start: fin.subtract(const Duration(days: diasSemanaUtilidad - 1)),
+    end: fin,
+  );
+}
+
+final utilidadPorProductoSemanaProvider =
+    FutureProvider.autoDispose<List<UtilidadProducto>>((ref) async {
+  final productos = ref.watch(utilidadProductosSeleccionadosProvider);
+  if (productos.isEmpty) return const [];
+
+  final repo = ref.watch(contabilidadRepositoryProvider);
+  final rango = rangoSemanaUtilidad();
+  return repo.getUtilidadPorProductoRango(rango.start, rango.end, productos);
+});
+
 final metricasMesProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final repo = ref.watch(contabilidadRepositoryProvider);
   final now = DateTime.now();
@@ -67,10 +97,13 @@ final metricasMesProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final ventasPorMetodo = await repo.getVentasPorMetodoPagoRango(startOfMonth, endOfMonth);
   final ventasEfectivoPublico = ventasPorMetodo['efectivo_publico'] ?? 0;
 
-  final abonosPorMetodo = await repo.getAbonosPorMetodoPagoRango(startOfMonth, endOfMonth);
-  final abonosEfectivo = abonosPorMetodo['efectivo'] ?? 0;
+  // El efectivo lo calcula la base: parte del conteo físico de caja en
+  // capital_negocio.fecha_corte y acumula TODOS los flujos posteriores.
+  // Antes se rehacía aquí a mano y quedaba descuadrado, porque ignoraba el
+  // efectivo inicial, las compras y los pagos a proveedores, y se limitaba
+  // al mes en curso en vez de arrancar en el conteo.
+  final efectivoReal = await repo.getEfectivoReal();
 
-  final efectivoReal = ventasEfectivoPublico + abonosEfectivo - gastosMes;
   final ventasMayoristaMes = (ventasPorMetodo['efectivo'] ?? 0) + (ventasPorMetodo['transferencias'] ?? 0) - (ventasPorMetodo['efectivo_publico'] ?? 0) - (ventasPorMetodo['transferencias_publico'] ?? 0);
 
   return {
@@ -101,20 +134,18 @@ final metricasDiaProvider = FutureProvider.autoDispose
 
   final utilidadDia = ventasDia - gastosDia - cogsDia;
 
-  final startOfMonth = DateTime(fecha.year, fecha.month, 1);
-  final endOfMonth = DateTime(fecha.year, fecha.month + 1, 0, 23, 59, 59);
-  final gastosMes = await repo.getTotalGastosRango(startOfMonth, endOfMonth);
+  // El efectivo lo calcula la base: parte del conteo físico de caja en
+  // capital_negocio.fecha_corte y acumula TODOS los flujos posteriores.
+  // Antes se rehacía aquí a mano y quedaba descuadrado, porque ignoraba el
+  // efectivo inicial, las compras y los pagos a proveedores, y se limitaba
+  // al mes en curso en vez de arrancar en el conteo.
+  final efectivoReal = await repo.getEfectivoReal();
 
-  final ventasPorMetodo = await repo.getVentasPorMetodoPagoRango(startOfMonth, endOfMonth);
-  final ventasEfectivoPublico = ventasPorMetodo['efectivo_publico'] ?? 0;
-
-  final abonosPorMetodo = await repo.getAbonosPorMetodoPagoRango(startOfMonth, endOfMonth);
-  final abonosEfectivo = abonosPorMetodo['efectivo'] ?? 0;
-
-  final efectivoReal = ventasEfectivoPublico + abonosEfectivo - gastosMes;
-
+  final prestamosRepo = ref.watch(prestamosRepositoryProvider);
   final ventasHoyList = await repo.getVentasPorDia(fecha);
   final deudaCompras = await repo.getDeudaTotalCompras();
+  final fiadosPendiente = await repo.getTotalFiadosPendiente();
+  final prestamosPendiente = await prestamosRepo.getTotalPrestamosPendiente();
 
   return {
     'num_ventas': ventasHoyList.length,
@@ -125,6 +156,8 @@ final metricasDiaProvider = FutureProvider.autoDispose
     'deuda_pendiente': deudaPendiente,
     'efectivo_real': efectivoReal,
     'deuda_compras': deudaCompras,
+    'fiados_pendiente': fiadosPendiente,
+    'prestamos_pendiente': prestamosPendiente,
   };
 });
 
@@ -138,10 +171,16 @@ final topProductosMesProvider = FutureProvider<List<Map<String, dynamic>>>((ref)
   return repo.getProductosMasVendidos(limit: 5);
 });
 
-final ventasPorDiaProvider = FutureProvider.autoDispose
-    .family<List<Map<String, dynamic>>, DateTime>((ref, fecha) async {
+final ventasPorRangoProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, DateTimeRange>((ref, range) async {
   final repo = ref.watch(contabilidadRepositoryProvider);
-  return repo.getVentasPorDia(fecha);
+  return repo.getVentasRango(range.start, range.end);
+});
+
+final itemsVentaProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, String>((ref, ventaId) async {
+  final repo = ref.watch(contabilidadRepositoryProvider);
+  return repo.getItemsDeVenta(ventaId);
 });
 
 final valorInventarioProvider = FutureProvider.autoDispose<Map<String, num>>((ref) async {
@@ -174,6 +213,19 @@ final flujoEfectivoRangoProvider = FutureProvider.autoDispose
   final abonosPorMetodo = await contabilidadRepo.getAbonosPorMetodoPagoRango(start, end);
   final abonosEfectivo = abonosPorMetodo['efectivo'] ?? 0;
 
+  // Los fiados entran a caja cuando la persona abona, no al venderse.
+  final abonosFiados =
+      await contabilidadRepo.getAbonosFiadosPorMetodoPagoRango(start, end);
+  final abonosFiadosEfectivo = abonosFiados['efectivo'] ?? 0;
+
+  // Un préstamo recibido entra a caja; el abono a capital sale. El interés
+  // no va aquí: ya sale como gasto y contarlo de nuevo lo restaría dos veces.
+  final movPrestamos = await ref
+      .watch(prestamosRepositoryProvider)
+      .getMovimientosEfectivoRango(start, end);
+  final prestamosRecibidos = movPrestamos['recibido'] ?? 0;
+  final prestamosAbonados = movPrestamos['abonado_capital'] ?? 0;
+
   // Solo los gastos pagados en efectivo salen de la caja física.
   final gastosEfectivo =
       await contabilidadRepo.getTotalGastosRango(start, end, metodoPago: 'efectivo');
@@ -189,8 +241,14 @@ final flujoEfectivoRangoProvider = FutureProvider.autoDispose
     metodoPago: 'efectivo',
   );
 
-  final flujoEntradas = ventasEfectivoPublico + abonosEfectivo;
-  final flujoSalidas = gastosEfectivo + comprasEfectivo + pagosComprasEfectivo;
+  final flujoEntradas = ventasEfectivoPublico +
+      abonosEfectivo +
+      abonosFiadosEfectivo +
+      prestamosRecibidos;
+  final flujoSalidas = gastosEfectivo +
+      comprasEfectivo +
+      pagosComprasEfectivo +
+      prestamosAbonados;
   final flujoNeto = flujoEntradas - flujoSalidas;
 
   return {

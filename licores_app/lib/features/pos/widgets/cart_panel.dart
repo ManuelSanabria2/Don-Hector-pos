@@ -10,7 +10,9 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/carrito_item.dart';
 import '../../../data/models/venta_enums.dart';
 import '../../../data/repositories/pos_repository.dart';
+import '../../compras/compras_providers.dart';
 import '../../contabilidad/contabilidad_providers.dart';
+import '../../contabilidad/fiados_providers.dart';
 import '../../inventario/inventario_providers.dart';
 import '../../mayoristas/mayoristas_providers.dart';
 import '../pos_providers.dart';
@@ -53,6 +55,7 @@ class _CartPanelState extends ConsumerState<CartPanel> {
             descuento: cart.descuento,
             notas: null,
             items: cart.items,
+            deudorNombre: cart.esFiadoPublico ? cart.deudorNombre?.trim() : null,
           );
 
       final clientesAsync = ref.read(posClientesProvider);
@@ -62,6 +65,10 @@ class _CartPanelState extends ConsumerState<CartPanel> {
           final match = clientesAsync.value!.firstWhere((c) => c.cliente.id == cart.clienteId);
           clienteNombre = match.cliente.nombre;
         } catch (_) {}
+      }
+      // En un fiado al público el recibo lleva el nombre de quien queda debiendo.
+      if (cart.esFiadoPublico) {
+        clienteNombre = cart.deudorNombre?.trim();
       }
 
       final receipt = PosReceiptData(
@@ -83,7 +90,12 @@ class _CartPanelState extends ConsumerState<CartPanel> {
       ref.invalidate(resumenHoyProvider);
       ref.invalidate(metricasMesProvider);
       ref.invalidate(ventasUltimos7DiasProvider);
-      ref.invalidate(ventasPorDiaProvider);
+      ref.invalidate(ventasPorRangoProvider);
+      ref.invalidate(estadoCuentaFiadosProvider);
+      ref.invalidate(totalFiadosPendienteProvider);
+      // El patrimonio depende del efectivo, el inventario y lo por cobrar,
+      // así que una venta lo mueve.
+      ref.invalidate(resumenPatrimonioProvider);
 
       if (!mounted) return;
       await _showSuccessDialog(context, receipt);
@@ -339,10 +351,10 @@ class _CartPanelState extends ConsumerState<CartPanel> {
                           value: MetodoPago.transferencia,
                           child: Text('Bancolombia'),
                         ),
-                      // Solo mayoristas pueden llevar fiado: la venta queda
-                      // como cuenta por cobrar en vez de pagada al instante.
-                      if (cart.tipoVenta == TipoVenta.mayorista &&
-                          cart.metodoPago != MetodoPago.credito)
+                      // La venta queda como deuda en vez de pagada al
+                      // instante: cuenta por cobrar si es mayorista, fiado
+                      // a nombre de una persona si es al público.
+                      if (cart.metodoPago != MetodoPago.credito)
                         const PopupMenuItem(
                           value: MetodoPago.credito,
                           child: Text('Crédito (fiado)'),
@@ -357,6 +369,10 @@ class _CartPanelState extends ConsumerState<CartPanel> {
               );
             },
           ),
+          if (cart.esFiadoPublico) ...[
+            const SizedBox(height: 12),
+            const DeudorFiadoField(),
+          ],
           const SizedBox(height: 12),
           Totals(cart: cart),
           const SizedBox(height: 16),
@@ -376,6 +392,72 @@ class _CartPanelState extends ConsumerState<CartPanel> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Nombre de quien queda debiendo, en ventas al público a crédito.
+/// No crea ficha de cliente: el panel de fiados agrupa por este nombre.
+class DeudorFiadoField extends ConsumerStatefulWidget {
+  const DeudorFiadoField({super.key});
+
+  @override
+  ConsumerState<DeudorFiadoField> createState() => _DeudorFiadoFieldState();
+}
+
+class _DeudorFiadoFieldState extends ConsumerState<DeudorFiadoField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: ref.read(posCartProvider).deudorNombre ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '¿A quién se le fía?',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _controller,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            hintText: 'Nombre de la persona',
+            prefixIcon: const Icon(Icons.person_outline),
+            filled: true,
+            fillColor: AppColors.superficie2,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: AppColors.borde),
+            ),
+          ),
+          onChanged: (value) {
+            ref.read(posCartProvider.notifier).setDeudorNombre(value);
+          },
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'La venta queda como deuda pendiente. Se cobra desde '
+          'Contabilidad → Fiados.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.blancoD,
+              ),
+        ),
+      ],
     );
   }
 }

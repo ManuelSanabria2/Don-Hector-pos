@@ -41,6 +41,11 @@ class CapitalRepository {
         'total_gastos_historico': 0,
         'valor_inventario_actual': 0,
         'patrimonio_estimado': 0,
+        'deuda_prestamos': 0,
+        'interes_prestamos_pagado': 0,
+        'dinero_disponible': 0,
+        'cuentas_por_cobrar': 0,
+        'deuda_proveedores': 0,
       };
     }
     
@@ -53,6 +58,11 @@ class CapitalRepository {
       'total_gastos_historico': parseNum(row['total_gastos_historico']),
       'valor_inventario_actual': parseNum(row['valor_inventario_actual']),
       'patrimonio_estimado': parseNum(row['patrimonio_estimado']),
+      'deuda_prestamos': parseNum(row['deuda_prestamos']),
+      'interes_prestamos_pagado': parseNum(row['interes_prestamos_pagado']),
+      'dinero_disponible': parseNum(row['dinero_disponible']),
+      'cuentas_por_cobrar': parseNum(row['cuentas_por_cobrar']),
+      'deuda_proveedores': parseNum(row['deuda_proveedores']),
     };
   }
 }

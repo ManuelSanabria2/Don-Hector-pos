@@ -13,8 +13,10 @@ import '../../data/models/categoria.dart';
 import '../../data/models/venta_enums.dart';
 import '../../data/repositories/inventario_repository.dart';
 import '../../data/repositories/pos_repository.dart';
+import '../compras/compras_providers.dart';
 import '../inventario/inventario_providers.dart';
 import '../contabilidad/contabilidad_providers.dart';
+import '../contabilidad/fiados_providers.dart';
 import '../mayoristas/mayoristas_providers.dart';
 import 'pos_providers.dart';
 import 'turbo_add_product_sheet.dart';
@@ -144,9 +146,17 @@ class _PosTurboScreenState extends ConsumerState<PosTurboScreen> {
     if (mounted) await _syncEditList();
   }
 
-  Future<void> _submitVenta(num total, MetodoPago metodo) async {
+  Future<void> _submitVenta(
+    num total,
+    MetodoPago metodo, {
+    String? deudorNombre,
+  }) async {
     final cartState = ref.read(posCartProvider);
     if (cartState.items.isEmpty) return;
+
+    final esFiado = metodo == MetodoPago.credito;
+    final nombre = deudorNombre?.trim();
+    if (esFiado && (nombre == null || nombre.isEmpty)) return;
 
     setState(() => _submitting = true);
 
@@ -156,6 +166,7 @@ class _PosTurboScreenState extends ConsumerState<PosTurboScreen> {
             metodoPago: metodo,
             items: cartState.items,
             descuento: cartState.descuento,
+            deudorNombre: esFiado ? nombre : null,
           );
 
       // Invalidate providers
@@ -165,8 +176,11 @@ class _PosTurboScreenState extends ConsumerState<PosTurboScreen> {
       ref.invalidate(stockBajoProvider);
       ref.invalidate(resumenHoyProvider);
       ref.invalidate(metricasMesProvider);
-      ref.invalidate(ventasPorDiaProvider);
+      ref.invalidate(ventasPorRangoProvider);
       ref.invalidate(mayoristasClientesProvider);
+      ref.invalidate(estadoCuentaFiadosProvider);
+      ref.invalidate(totalFiadosPendienteProvider);
+      ref.invalidate(resumenPatrimonioProvider);
 
       if (!mounted) return;
       
@@ -178,6 +192,7 @@ class _PosTurboScreenState extends ConsumerState<PosTurboScreen> {
         builder: (ctx) => _SuccessCheckoutDialog(
           total: total,
           metodo: metodo,
+          deudorNombre: esFiado ? nombre : null,
         ),
       );
     } catch (e) {
@@ -469,9 +484,11 @@ class _PosTurboScreenState extends ConsumerState<PosTurboScreen> {
                                         return _SidebarCart(
                                           cartState: localCart,
                                           submitting: _submitting,
-                                          onSubmit: (tot, met) async {
+                                          onSubmit: (tot, met,
+                                              {String? deudorNombre}) async {
                                             Navigator.of(context).pop(); // Cerrar sheet
-                                            await _submitVenta(tot, met);
+                                            await _submitVenta(tot, met,
+                                                deudorNombre: deudorNombre);
                                           },
                                         );
                                       },
@@ -714,7 +731,8 @@ class _SidebarCart extends StatefulWidget {
 
   final PosCartState cartState;
   final bool submitting;
-  final Future<void> Function(num total, MetodoPago metodo) onSubmit;
+  final Future<void> Function(num total, MetodoPago metodo,
+      {String? deudorNombre}) onSubmit;
 
   @override
   State<_SidebarCart> createState() => _SidebarCartState();
@@ -722,6 +740,18 @@ class _SidebarCart extends StatefulWidget {
 
 class _SidebarCartState extends State<_SidebarCart> {
   MetodoPago _selectedMetodo = MetodoPago.efectivo;
+  final _deudorCtrl = TextEditingController();
+
+  bool get _esFiado => _selectedMetodo == MetodoPago.credito;
+
+  /// Un fiado sin nombre no se puede cobrar después; la base lo rechaza.
+  bool get _faltaDeudor => _esFiado && _deudorCtrl.text.trim().isEmpty;
+
+  @override
+  void dispose() {
+    _deudorCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -842,8 +872,35 @@ class _SidebarCartState extends State<_SidebarCart> {
                     selected: _selectedMetodo == MetodoPago.transferencia,
                     onTap: () => setState(() => _selectedMetodo = MetodoPago.transferencia),
                   ),
+                  _MetodoButton(
+                    label: 'Fiado',
+                    icon: Icons.handshake_outlined,
+                    selected: _esFiado,
+                    onTap: () => setState(() => _selectedMetodo = MetodoPago.credito),
+                  ),
                 ],
               ),
+              // El campo solo aparece al fiar, para no estorbar la venta
+              // rápida de mostrador.
+              if (_esFiado) ...[
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _deudorCtrl,
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: '¿A quién se le fía?',
+                    prefixIcon: const Icon(Icons.person_outline, size: 20),
+                    filled: true,
+                    fillColor: const Color(0xFF262626),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -874,9 +931,15 @@ class _SidebarCartState extends State<_SidebarCart> {
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
-                    onPressed: widget.cartState.items.isEmpty || widget.submitting
+                    onPressed: widget.cartState.items.isEmpty ||
+                            widget.submitting ||
+                            _faltaDeudor
                         ? null
-                        : () => widget.onSubmit(widget.cartState.total, _selectedMetodo),
+                        : () => widget.onSubmit(
+                              widget.cartState.total,
+                              _selectedMetodo,
+                              deudorNombre: _deudorCtrl.text,
+                            ),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.ambar,
                       foregroundColor: Colors.black,
@@ -961,10 +1024,14 @@ class _SuccessCheckoutDialog extends StatefulWidget {
   const _SuccessCheckoutDialog({
     required this.total,
     required this.metodo,
+    this.deudorNombre,
   });
 
   final num total;
   final MetodoPago metodo;
+
+  /// Solo en fiados: a quién se le fió.
+  final String? deudorNombre;
 
   @override
   State<_SuccessCheckoutDialog> createState() => _SuccessCheckoutDialogState();
@@ -1021,9 +1088,24 @@ class _SuccessCheckoutDialogState extends State<_SuccessCheckoutDialog> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Método: ${widget.metodo.value.toUpperCase()}',
+              widget.metodo == MetodoPago.credito
+                  ? 'Método: FIADO'
+                  : 'Método: ${widget.metodo.value.toUpperCase()}',
               style: const TextStyle(color: AppColors.blancoD, fontSize: 13),
             ),
+            if (widget.metodo == MetodoPago.credito &&
+                (widget.deudorNombre?.trim().isNotEmpty ?? false)) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Queda debiendo: ${widget.deudorNombre!.trim()}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.ambar,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,

@@ -20,7 +20,8 @@ enum MetodoPago {
   daviplata('daviplata'),
   transferencia('transferencia'),
   otro('otro'),
-  // Solo válido en ventas mayoristas: la venta queda como cuenta por cobrar.
+  // La venta queda como deuda en vez de pagada al instante: cuenta por
+  // cobrar si es mayorista, fiado a nombre de una persona si es al público.
   credito('credito');
 
   const MetodoPago(this.value);
