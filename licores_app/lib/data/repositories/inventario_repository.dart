@@ -100,6 +100,34 @@ class InventarioRepository {
     await _client.from('productos').delete().eq('id', id);
   }
 
+  /// Los mas vendidos a MAYORISTAS dentro de un dia, para el acceso
+  /// rapido en la pestana de venta. [dia] null = dia de hoy.
+  ///
+  /// El rango se calcula en hora local y se manda en UTC, como el
+  /// resto de consultas por fecha del proyecto, para que "hoy" sea el
+  /// dia del negocio y no el dia UTC.
+  Future<List<Producto>> getProductosMasVendidosMayoristaDia({
+    DateTime? dia,
+    int limit = 10,
+  }) async {
+    final base = dia ?? DateTime.now();
+    final desde = DateTime(base.year, base.month, base.day);
+    final hasta = desde.add(const Duration(days: 1));
+
+    final rows = await _client.rpc(
+      'productos_mas_vendidos_mayorista_dia',
+      params: {
+        'p_desde': desde.toUtc().toIso8601String(),
+        'p_hasta': hasta.toUtc().toIso8601String(),
+        'p_limit': limit,
+      },
+    ) as List<dynamic>;
+
+    return rows
+        .map((row) => Producto.fromJson(Map<String, dynamic>.from(row as Map)))
+        .toList();
+  }
+
   Future<List<Producto>> getProductosTurbo() async {
     final rows = await _client
         .from('productos')

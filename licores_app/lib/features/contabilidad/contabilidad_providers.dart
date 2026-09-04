@@ -53,30 +53,47 @@ final utilidadRangoProvider = FutureProvider.autoDispose
   };
 });
 
-/// Cuántos días atrás mira la utilidad por producto (hoy incluido).
+/// Cuántos días abarca el rango por defecto de la utilidad por producto.
 const int diasSemanaUtilidad = 7;
 
-/// Productos que el usuario eligió para ver su utilidad semanal.
+/// Productos que el usuario eligió para ver su utilidad.
 final utilidadProductosSeleccionadosProvider =
     StateProvider<List<Producto>>((ref) => const []);
 
-/// Rango de la semana: los últimos [diasSemanaUtilidad] días, hoy incluido.
-DateTimeRange rangoSemanaUtilidad([DateTime? hoy]) {
+/// Rango de los últimos [dias] días, hoy incluido. Es el valor por defecto.
+DateTimeRange rangoUltimosDias(
+  int dias, [
+  DateTime? hoy,
+]) {
   final ahora = hoy ?? DateTime.now();
   final fin = DateTime(ahora.year, ahora.month, ahora.day);
   return DateTimeRange(
-    start: fin.subtract(const Duration(days: diasSemanaUtilidad - 1)),
+    start: fin.subtract(Duration(days: dias - 1)),
     end: fin,
   );
 }
 
-final utilidadPorProductoSemanaProvider =
+/// Rango del mes en curso, del día 1 a hoy.
+DateTimeRange rangoMesEnCurso([DateTime? hoy]) {
+  final ahora = hoy ?? DateTime.now();
+  return DateTimeRange(
+    start: DateTime(ahora.year, ahora.month, 1),
+    end: DateTime(ahora.year, ahora.month, ahora.day),
+  );
+}
+
+/// Período que se está viendo en la pestaña de utilidad por producto.
+final utilidadRangoFechasProvider = StateProvider<DateTimeRange>(
+  (ref) => rangoUltimosDias(diasSemanaUtilidad),
+);
+
+final utilidadPorProductoRangoProvider =
     FutureProvider.autoDispose<List<UtilidadProducto>>((ref) async {
   final productos = ref.watch(utilidadProductosSeleccionadosProvider);
   if (productos.isEmpty) return const [];
 
   final repo = ref.watch(contabilidadRepositoryProvider);
-  final rango = rangoSemanaUtilidad();
+  final rango = ref.watch(utilidadRangoFechasProvider);
   return repo.getUtilidadPorProductoRango(rango.start, rango.end, productos);
 });
 

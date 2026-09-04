@@ -9,8 +9,9 @@ import '../../data/models/utilidad_producto.dart';
 import '../../data/repositories/inventario_repository.dart';
 import 'contabilidad_providers.dart';
 
-/// Pestaña de Contabilidad que muestra la utilidad de la última semana de los
-/// productos que el usuario elija, para decidir qué conviene reponer.
+/// Pestaña de Contabilidad que muestra la utilidad, en el período que se elija,
+/// de los productos que el usuario seleccione, para decidir qué conviene
+/// reponer.
 ///
 /// No es un [Scaffold]: se monta dentro del TabBarView de ContabilidadScreen.
 class UtilidadProductoTab extends ConsumerWidget {
@@ -33,28 +34,59 @@ class UtilidadProductoTab extends ConsumerWidget {
     }
   }
 
+  /// Mismo selector de rango que usan Análisis Financiero y las facturas del
+  /// resumen diario, para que el calendario se vea igual en todo Contabilidad.
+  Future<void> _seleccionarRango(BuildContext context, WidgetRef ref) async {
+    final actual = ref.read(utilidadRangoFechasProvider);
+    final elegido = await showDateRangePicker(
+      context: context,
+      initialDateRange: actual,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.ambar,
+              onPrimary: Colors.black,
+              surface: Color(0xFA131310),
+              onSurface: AppColors.blanco,
+            ),
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Color(0xFA131310),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (elegido != null) {
+      ref.read(utilidadRangoFechasProvider.notifier).state = elegido;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final seleccionados = ref.watch(utilidadProductosSeleccionadosProvider);
-    final utilidadAsync = ref.watch(utilidadPorProductoSemanaProvider);
-    final rango = rangoSemanaUtilidad();
-    final formato = DateFormat('dd/MM');
+    final utilidadAsync = ref.watch(utilidadPorProductoRangoProvider);
+    final rango = ref.watch(utilidadRangoFechasProvider);
+    final formato = DateFormat('dd/MM/yy');
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(utilidadPorProductoSemanaProvider),
+      onRefresh: () async => ref.invalidate(utilidadPorProductoRangoProvider),
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const Icon(Icons.date_range_outlined,
-                  size: 18, color: AppColors.blancoD),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Últimos $diasSemanaUtilidad días '
-                  '(${formato.format(rango.start)} - ${formato.format(rango.end)})',
-                  style: const TextStyle(color: AppColors.blancoD),
+              OutlinedButton.icon(
+                onPressed: () => _seleccionarRango(context, ref),
+                icon: const Icon(Icons.calendar_month, size: 16),
+                label: Text(
+                  '${formato.format(rango.start)} - ${formato.format(rango.end)}',
                 ),
               ),
               FilledButton.icon(
@@ -68,6 +100,8 @@ class UtilidadProductoTab extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          _AtajosPeriodo(rango: rango),
           const SizedBox(height: 12),
           if (seleccionados.isNotEmpty) ...[
             Wrap(
@@ -96,7 +130,7 @@ class UtilidadProductoTab extends ConsumerWidget {
               child: Center(
                 child: Text(
                   'Elige uno o varios productos para ver\n'
-                  'cuánta utilidad dejaron esta semana.',
+                  'cuánta utilidad dejaron en el período.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.blancoD),
                 ),
@@ -131,6 +165,42 @@ class UtilidadProductoTab extends ConsumerWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Atajos para los períodos que se consultan a diario, sin abrir el calendario.
+class _AtajosPeriodo extends ConsumerWidget {
+  const _AtajosPeriodo({required this.rango});
+
+  final DateTimeRange rango;
+
+  bool _esMismoRango(DateTimeRange otro) {
+    return DateUtils.isSameDay(rango.start, otro.start) &&
+        DateUtils.isSameDay(rango.end, otro.end);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final atajos = <String, DateTimeRange>{
+      'Hoy': rangoUltimosDias(1),
+      '7 días': rangoUltimosDias(diasSemanaUtilidad),
+      '30 días': rangoUltimosDias(30),
+      'Este mes': rangoMesEnCurso(),
+    };
+
+    return Wrap(
+      spacing: 8,
+      children: [
+        for (final atajo in atajos.entries)
+          ChoiceChip(
+            label: Text(atajo.key),
+            selected: _esMismoRango(atajo.value),
+            onSelected: (_) => ref
+                .read(utilidadRangoFechasProvider.notifier)
+                .state = atajo.value,
+          ),
+      ],
     );
   }
 }

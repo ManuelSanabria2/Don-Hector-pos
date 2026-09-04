@@ -17,6 +17,14 @@ class ProductSearchPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final productos = ref.watch(posProductosProvider);
+    final buscando = ref.watch(posBusquedaProvider).trim().isNotEmpty;
+
+    // Con una busqueda activa manda la lista filtrada: el encabezado de
+    // mas vendidos solo tiene sentido sobre el catalogo completo.
+    final masVendidos = buscando
+        ? const <Producto>[]
+        : ref.watch(posMasVendidosProvider).asData?.value ??
+            const <Producto>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,11 +65,24 @@ class ProductSearchPanel extends ConsumerWidget {
                 return const Center(child: Text('No hay productos'));
               }
 
+              final filas = <_FilaLista>[
+                if (masVendidos.isNotEmpty) ...[
+                  const _FilaLista.separador('10 MÁS VENDIDOS HOY'),
+                  ...masVendidos.map(_FilaLista.producto),
+                  const _FilaLista.separador('TODOS LOS PRODUCTOS (A-Z)'),
+                ],
+                ...items.map(_FilaLista.producto),
+              ];
+
               return ListView.separated(
-                itemCount: items.length,
+                itemCount: filas.length,
                 separatorBuilder: (context, index) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
-                  return ProductTile(producto: items[index]);
+                  final fila = filas[index];
+                  final producto = fila.producto;
+                  return producto == null
+                      ? _SeparadorTexto(titulo: fila.titulo!)
+                      : ProductTile(producto: producto);
                 },
               );
             },
@@ -98,6 +119,35 @@ class ProductSearchPanel extends ConsumerWidget {
         content: Text('Error al procesar el codigo de barras.'),
       ));
     }
+  }
+}
+
+/// Una fila de la lista de venta: o un separador de texto, o un producto.
+class _FilaLista {
+  const _FilaLista.separador(this.titulo) : producto = null;
+  const _FilaLista.producto(this.producto) : titulo = null;
+
+  final String? titulo;
+  final Producto? producto;
+}
+
+class _SeparadorTexto extends StatelessWidget {
+  const _SeparadorTexto({required this.titulo});
+
+  final String titulo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4, left: 4),
+      child: Text(
+        titulo,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppColors.blancoD,
+              letterSpacing: 1.2,
+            ),
+      ),
+    );
   }
 }
 

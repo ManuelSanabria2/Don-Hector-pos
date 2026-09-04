@@ -218,3 +218,11 @@ class PosCartController extends StateNotifier<PosCartState> {
 final posTurboProductosProvider = FutureProvider.autoDispose<List<Producto>>((ref) {
   return ref.watch(inventarioRepositoryProvider).getProductosTurbo();
 });
+
+/// Top 10 productos mas vendidos a mayoristas en el dia de hoy, que
+/// encabezan la lista de la pestana de venta.
+final posMasVendidosProvider = FutureProvider.autoDispose<List<Producto>>((ref) {
+  return ref
+      .watch(inventarioRepositoryProvider)
+      .getProductosMasVendidosMayoristaDia(limit: 10);
+});

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:licores_app/data/models/producto.dart';
 import 'package:licores_app/data/models/utilidad_producto.dart';
 import 'package:licores_app/features/contabilidad/contabilidad_providers.dart';
@@ -22,12 +23,15 @@ Future<void> _montar(
   WidgetTester tester, {
   required List<Producto> seleccion,
   required List<UtilidadProducto> filas,
+  DateTimeRange? rango,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         utilidadProductosSeleccionadosProvider.overrideWith((ref) => seleccion),
-        utilidadPorProductoSemanaProvider.overrideWith((ref) async => filas),
+        utilidadPorProductoRangoProvider.overrideWith((ref) async => filas),
+        if (rango != null)
+          utilidadRangoFechasProvider.overrideWith((ref) => rango),
       ],
       child: const MaterialApp(
         home: Scaffold(body: UtilidadProductoTab()),
@@ -44,8 +48,55 @@ void main() {
 
       expect(find.textContaining('Elige uno o varios productos'), findsOneWidget);
       expect(find.text('Elegir productos'), findsOneWidget);
-      expect(find.textContaining('Últimos $diasSemanaUtilidad días'),
-          findsOneWidget);
+    });
+
+    testWidgets('Muestra el período elegido y sus atajos', (tester) async {
+      await _montar(
+        tester,
+        seleccion: const [],
+        filas: const [],
+        rango: DateTimeRange(
+          start: DateTime(2026, 8, 4),
+          end: DateTime(2026, 8, 10),
+        ),
+      );
+
+      expect(find.text('04/08/26 - 10/08/26'), findsOneWidget);
+      for (final atajo in ['Hoy', '7 días', '30 días', 'Este mes']) {
+        expect(find.text(atajo), findsOneWidget);
+      }
+    });
+
+    testWidgets('El atajo de 7 días queda marcado con el rango por defecto',
+        (tester) async {
+      await _montar(
+        tester,
+        seleccion: const [],
+        filas: const [],
+        rango: rangoUltimosDias(diasSemanaUtilidad),
+      );
+
+      final chips = tester
+          .widgetList<ChoiceChip>(find.byType(ChoiceChip))
+          .where((c) => c.selected);
+      expect(chips, hasLength(1));
+      expect((chips.single.label as Text).data, equals('7 días'));
+    });
+
+    testWidgets('Tocar un atajo cambia el período consultado', (tester) async {
+      await _montar(
+        tester,
+        seleccion: const [],
+        filas: const [],
+        rango: rangoUltimosDias(diasSemanaUtilidad),
+      );
+
+      await tester.tap(find.text('Hoy'));
+      await tester.pumpAndSettle();
+
+      final hoy = DateTime.now();
+      final esperado = DateFormat('dd/MM/yy').format(hoy);
+      expect(find.text('$esperado - $esperado'), findsOneWidget);
     });
 
     testWidgets('Muestra métricas y total de la selección', (tester) async {
