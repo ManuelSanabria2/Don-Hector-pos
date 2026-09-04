@@ -17,6 +17,79 @@ class CompraDetalleScreen extends ConsumerWidget {
 
   final String compraId;
 
+  /// Pasa la compra a canje de rebate cuando se registró como pagada con
+  /// plata por error. Se usa cuando anular y volver a registrar no se
+  /// puede porque la mercancía ya se vendió.
+  Future<void> _convertirARebate(
+    BuildContext context,
+    WidgetRef ref,
+    CompraInventario compra,
+    num saldoProveedor,
+  ) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.superficie,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('¿Se pagó con rebate?'),
+        content: Text(
+          'La compra quedará como canje de rebate: se descontarán '
+          '${CurrencyFormatter.cop(compra.total)} del saldo de '
+          '${compra.nombreProveedor ?? 'el proveedor'} '
+          '(tiene ${CurrencyFormatter.cop(saldoProveedor)}) y dejará de '
+          'contar como plata que salió de la caja.\n\n'
+          'El stock, los costos y el detalle no se tocan: la mercancía '
+          'entró igual, lo que estaba mal era de dónde salió el dinero.',
+          style: const TextStyle(color: AppColors.blancoD, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: AppColors.gris)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sí, corregir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmado != true) return;
+
+    try {
+      final saldoRestante = await ref
+          .read(comprasRepositoryProvider)
+          .convertirCompraARebate(compra.id);
+
+      ref.invalidate(compraDetalleProvider(compra.id));
+      ref.invalidate(comprasDelMesProvider);
+      ref.invalidate(totalComprasRangoProvider);
+      ref.invalidate(resumenHoyProvider);
+      ref.invalidate(metricasMesProvider);
+      ref.invalidate(metricasDiaProvider(compra.fecha));
+      ref.invalidate(resumenPatrimonioProvider);
+      ref.invalidate(saldosRebatesProvider);
+      ref.invalidate(movimientosRebateProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Corregida. Saldo restante: ${CurrencyFormatter.cop(saldoRestante)}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo corregir: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final compraAsync = ref.watch(compraDetalleProvider(compraId));
@@ -71,6 +144,17 @@ class CompraDetalleScreen extends ConsumerWidget {
             0,
             (sum, l) => sum + (l.cantidad * l.costoUnitario),
           );
+
+          // Saldo de rebate del proveedor de ESTA compra, para decidir si
+          // la corrección de origen de fondos es siquiera posible.
+          final saldosRebate = ref.watch(saldosRebatesProvider).value ?? const [];
+          num saldoProveedor = 0;
+          for (final fila in saldosRebate) {
+            if (fila.proveedorId == compra.proveedorId) {
+              saldoProveedor = fila.saldo;
+              break;
+            }
+          }
 
           return Column(
             children: [
@@ -470,6 +554,43 @@ class CompraDetalleScreen extends ConsumerWidget {
                                 }
                               }
                             },
+                          ),
+                        ),
+                      ],
+                      // Corrección de origen de fondos: solo cuando la
+                      // compra se puede pagar de verdad con el saldo que
+                      // ese proveedor tiene hoy. Si no alcanza, el botón
+                      // no aparece en vez de fallar al tocarlo.
+                      if (!compra.anulado &&
+                          compra.metodoPago != 'rebate' &&
+                          compra.proveedorId != null &&
+                          saldoProveedor >= compra.total) ...[
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.ambar,
+                              side: const BorderSide(color: AppColors.ambar),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.card_giftcard),
+                            label: const Text(
+                              'SE PAGÓ CON REBATE',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                            onPressed: () => _convertirARebate(
+                              context,
+                              ref,
+                              compra,
+                              saldoProveedor,
+                            ),
                           ),
                         ),
                       ],

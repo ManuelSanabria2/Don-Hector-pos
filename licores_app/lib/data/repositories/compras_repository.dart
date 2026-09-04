@@ -211,6 +211,26 @@ class ComprasRepository {
     });
   }
 
+  /// Corrige una compra que se registró como pagada con plata cuando en
+  /// realidad se canjeó con el saldo de rebate del proveedor.
+  ///
+  /// Es la salida para cuando anular y volver a registrar no se puede
+  /// porque la mercancía ya se vendió y el stock no alcanza para
+  /// revertirla. Solo cambia el origen de fondos: no toca stock,
+  /// costos ni el detalle de la compra.
+  ///
+  /// Devuelve el saldo de rebate que le queda al proveedor.
+  Future<num> convertirCompraARebate(String compraId, {String? notas}) async {
+    final saldo = await _client.rpc(
+      'convertir_compra_a_rebate',
+      params: {
+        'p_compra_id': compraId,
+        'p_notas': notas,
+      },
+    );
+    return parseNum(saldo);
+  }
+
   /// Anulación lógica, como el resto del proyecto: el movimiento se
   /// marca y el saldo se recalcula sin él.
   Future<void> anularMovimientoRebate(String id) async {
