@@ -50,4 +50,5 @@ Consequences for changes:
 - `detalle_ventas` stores the product cost at sale time (historical cost); profit calculations use that, not current product cost.
 - Product prices/costs allow decimals; only some categories (e.g. Cerveza) are intended to use them.
 - Capital del negocio (`capital_negocio`) tracks money in/out and is updated by purchase/sale flows.
+- Supplier rebates (`rebates_proveedor`): a supplier credit earned by hitting volume targets that can *only* be redeemed in that supplier's merchandise. It is a memorandum balance — deliberately outside `patrimonio_estimado` and outside cash — derived from movements (`acumulacion`/`ajuste` add, `canje`/`vencimiento` subtract), never a mutable `saldo` column. Redemption is a normal purchase with `metodo_pago = 'rebate'` **at real list costs** (zero costs would dilute the weighted-average cost and inflate future margins); `registrar_compra` inserts the `canje` in the same transaction, and `anular_compra` gives the balance back.
 - The POS voice assistant (`pos_asistente_provider.dart`) uses speech_to_text + flutter_tts and calls the Gemini API over HTTP.

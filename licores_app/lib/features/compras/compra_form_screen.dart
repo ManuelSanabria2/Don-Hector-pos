@@ -9,6 +9,7 @@ import '../../core/utils/currency_formatter.dart';
 import '../../data/models/proveedor.dart';
 import '../../data/models/producto.dart';
 import '../../data/models/detalle_compra.dart';
+import '../../data/models/rebate_proveedor.dart';
 import '../../data/repositories/compras_repository.dart';
 import '../../data/repositories/inventario_repository.dart';
 import '../inventario/inventario_providers.dart';
@@ -64,6 +65,16 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
       return baseTotal + ajuste;
     }
     return baseTotal;
+  }
+
+  /// Saldo de rebate del proveedor elegido. Sin proveedor no hay saldo:
+  /// el rebate siempre lo otorga alguien.
+  num _saldoRebateDe(List<SaldoRebateProveedor> saldos) {
+    if (_proveedorId == null) return 0;
+    for (final saldo in saldos) {
+      if (saldo.proveedorId == _proveedorId) return saldo.saldo;
+    }
+    return 0;
   }
 
   Future<void> _showCrearProveedorDialog() async {
@@ -193,17 +204,46 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
+    final proveedoresList = ref.read(proveedoresProvider).value ?? [];
+    final selectedProv = proveedoresList.firstWhere(
+      (p) => p.id == _proveedorId,
+      orElse: () => Proveedor(id: '', nombre: ''),
+    );
+    final esLider = selectedProv.nombre.trim().toUpperCase() == 'LIDER';
+
+    // Un canje de rebate lo valida el trigger en Postgres, pero avisar
+    // antes evita perder la compra ya digitada por un saldo corto.
+    if (_metodoPago == 'rebate') {
+      if (_proveedorId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Un canje de rebate necesita indicar el proveedor'),
+          ),
+        );
+        return;
+      }
+
+      final saldos = ref.read(saldosRebatesProvider).value ?? const [];
+      final saldo = _saldoRebateDe(saldos);
+      final total = _calcularTotalCompra(esLider);
+      if (total > saldo) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'El saldo de rebate es ${formatCOP(saldo.toDouble())} '
+              'y la compra vale ${formatCOP(total.toDouble())}',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _saving = true);
 
     try {
       final repo = ref.read(comprasRepositoryProvider);
-      
-      final proveedoresList = ref.read(proveedoresProvider).value ?? [];
-      final selectedProv = proveedoresList.firstWhere(
-        (p) => p.id == _proveedorId,
-        orElse: () => Proveedor(id: '', nombre: ''),
-      );
-      final esLider = selectedProv.nombre.trim().toUpperCase() == 'LIDER';
+
       final ajuste = esLider ? CurrencyFormatter.parseCop(_ajusteCtrl.text) : 0;
       final valorDeuda = _metodoPago == 'credito' ? CurrencyFormatter.parseCop(_deudaCtrl.text) : 0;
 
@@ -237,6 +277,10 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
       ref.invalidate(resumenHoyProvider);
       ref.invalidate(metricasMesProvider);
       ref.invalidate(resumenPatrimonioProvider);
+      if (_metodoPago == 'rebate') {
+        ref.invalidate(saldosRebatesProvider);
+        ref.invalidate(movimientosRebateProvider);
+      }
 
       if (mounted) {
         context.pop();
@@ -267,6 +311,9 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
     );
     final esLider = selectedProv.nombre.trim().toUpperCase() == 'LIDER';
     final totalCompra = _calcularTotalCompra(esLider);
+    final saldosRebate =
+        ref.watch(saldosRebatesProvider).value ?? const <SaldoRebateProveedor>[];
+    final saldoRebate = _saldoRebateDe(saldosRebate);
 
     return Scaffold(
       appBar: AppBar(
@@ -333,6 +380,13 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                           if (!esLiderNew) {
                                             _ajusteCtrl.text = '0';
                                           }
+                                          // El saldo de rebate es del
+                                          // proveedor anterior: al cambiarlo,
+                                          // el canje deja de tener respaldo.
+                                          if (_metodoPago == 'rebate' &&
+                                              _saldoRebateDe(saldosRebate) <= 0) {
+                                            _metodoPago = 'efectivo';
+                                          }
                                         });
                                       },
                                     ),
@@ -374,13 +428,30 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                             DropdownButtonFormField<String>(
                               value: _metodoPago,
                               decoration: const InputDecoration(labelText: 'Método de pago'),
-                              items: const [
-                                DropdownMenuItem(value: 'efectivo', child: Text('Efectivo')),
-                                DropdownMenuItem(value: 'nequi', child: Text('Nequi')),
-                                DropdownMenuItem(value: 'daviplata', child: Text('Daviplata')),
-                                DropdownMenuItem(value: 'transferencia', child: Text('Transferencia')),
-                                DropdownMenuItem(value: 'credito', child: Text('Crédito')),
-                                DropdownMenuItem(value: 'otro', child: Text('Otro')),
+                              items: [
+                                const DropdownMenuItem(value: 'efectivo', child: Text('Efectivo')),
+                                const DropdownMenuItem(value: 'nequi', child: Text('Nequi')),
+                                const DropdownMenuItem(value: 'daviplata', child: Text('Daviplata')),
+                                const DropdownMenuItem(value: 'transferencia', child: Text('Transferencia')),
+                                const DropdownMenuItem(value: 'credito', child: Text('Crédito')),
+                                // El rebate es un saldo a favor de un
+                                // proveedor concreto: sin proveedor elegido
+                                // no hay de dónde descontarlo.
+                                DropdownMenuItem(
+                                  value: 'rebate',
+                                  enabled: saldoRebate > 0,
+                                  child: Text(
+                                    saldoRebate > 0
+                                        ? 'Rebate (saldo ${formatCOP(saldoRebate.toDouble())})'
+                                        : 'Rebate (sin saldo)',
+                                    style: TextStyle(
+                                      color: saldoRebate > 0
+                                          ? null
+                                          : AppColors.gris,
+                                    ),
+                                  ),
+                                ),
+                                const DropdownMenuItem(value: 'otro', child: Text('Otro')),
                               ],
                               onChanged: (val) {
                                 setState(() {
@@ -393,6 +464,13 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                 });
                               },
                             ),
+                            if (_metodoPago == 'rebate') ...[
+                              const SizedBox(height: 12),
+                              _AvisoRebate(
+                                saldo: saldoRebate,
+                                total: totalCompra,
+                              ),
+                            ],
                             if (esLider) ...[
                               const SizedBox(height: 12),
                               TextFormField(
@@ -819,6 +897,68 @@ class _ProductSearchBottomSheetState extends ConsumerState<_ProductSearchBottomS
                           ),
           ),
           const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+}
+
+/// Recordatorio de qué significa pagar con rebate, y si el saldo alcanza.
+///
+/// Los costos se digitan como siempre (los reales de lista): el canje
+/// cambia de dónde sale la plata, no cuánto vale la mercancía. Meterla a
+/// costo cero diluiría el costo promedio del producto.
+class _AvisoRebate extends StatelessWidget {
+  const _AvisoRebate({required this.saldo, required this.total});
+
+  final num saldo;
+  final num total;
+
+  @override
+  Widget build(BuildContext context) {
+    final alcanza = total > 0 && total <= saldo;
+    final color = alcanza ? AppColors.verde : AppColors.rojo;
+    final restante = saldo - total;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            alcanza ? Icons.card_giftcard : Icons.warning_amber_rounded,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  alcanza
+                      ? 'Se descontarán ${formatCOP(total.toDouble())} del saldo. '
+                          'Quedan ${formatCOP(restante.toDouble())}.'
+                      : total <= 0
+                          ? 'Agrega productos para canjear el rebate.'
+                          : 'El saldo (${formatCOP(saldo.toDouble())}) no alcanza '
+                              'para ${formatCOP(total.toDouble())}.',
+                  style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Digita los costos reales de lista: el canje cambia de dónde '
+                  'sale la plata, no cuánto vale la mercancía. No sale nada de caja.',
+                  style: TextStyle(color: AppColors.blancoD, fontSize: 12, height: 1.3),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

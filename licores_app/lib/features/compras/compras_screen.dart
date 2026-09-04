@@ -10,6 +10,7 @@ import '../contabilidad/contabilidad_providers.dart';
 import 'compras_providers.dart';
 import 'compra_form_screen.dart';
 import 'compra_detalle_screen.dart';
+import 'rebates_screen.dart';
 
 class ComprasScreen extends ConsumerStatefulWidget {
   const ComprasScreen({super.key});
@@ -95,6 +96,10 @@ class _ComprasScreenState extends ConsumerState<ComprasScreen> {
         ref.invalidate(resumenHoyProvider);
         ref.invalidate(metricasMesProvider);
         ref.invalidate(resumenPatrimonioProvider);
+        // Si la compra se pagó con rebate, el canje se anuló con ella
+        // y el saldo del proveedor volvió a estar disponible.
+        ref.invalidate(saldosRebatesProvider);
+        ref.invalidate(movimientosRebateProvider);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -120,6 +125,7 @@ class _ComprasScreenState extends ConsumerState<ComprasScreen> {
 
     final totalAsync = ref.watch(totalComprasRangoProvider(rangeToQuery));
     final proveedoresAsync = ref.watch(proveedoresProvider);
+    final saldoRebateAsync = ref.watch(saldoRebateTotalProvider);
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -132,6 +138,13 @@ class _ComprasScreenState extends ConsumerState<ComprasScreen> {
               ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.card_giftcard, color: Colors.white70),
+            tooltip: 'Rebates de proveedor',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const RebatesScreen()),
+            ),
+          ),
           IconButton(
             icon: Icon(
               _selectedRange == null ? Icons.calendar_today : Icons.calendar_today_outlined,
@@ -212,10 +225,44 @@ class _ComprasScreenState extends ConsumerState<ComprasScreen> {
                     ),
                     Container(width: 1, height: 40, color: Colors.white10),
                     Expanded(
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const RebatesScreen()),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              'Saldo rebate',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: AppColors.blancoD, fontSize: 12),
+                            ),
+                            const SizedBox(height: 6),
+                            saldoRebateAsync.when(
+                              data: (saldo) => Text(
+                                formatCOP(saldo.toDouble()),
+                                style: TextStyle(
+                                  color: saldo > 0 ? AppColors.verde : AppColors.blancoD,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              loading: () => const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              error: (_, __) => const Text('!', style: TextStyle(color: Colors.redAccent)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Container(width: 1, height: 40, color: Colors.white10),
+                    Expanded(
                       child: Column(
                         children: [
                           const Text(
-                            'Proveedores activos',
+                            'Proveedores',
                             textAlign: TextAlign.center,
                             style: TextStyle(color: AppColors.blancoD, fontSize: 12),
                           ),

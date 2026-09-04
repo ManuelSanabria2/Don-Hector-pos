@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/proveedor.dart';
 import '../../data/models/compra_inventario.dart';
 import '../../data/models/capital_negocio.dart';
+import '../../data/models/rebate_proveedor.dart';
 import '../../data/repositories/compras_repository.dart';
 import '../../data/repositories/capital_repository.dart';
 
@@ -59,4 +60,26 @@ final resumenPatrimonioProvider = FutureProvider<Map<String, num>>((ref) {
 final compraDetalleProvider = FutureProvider.family<CompraInventario, String>((ref, compraId) {
   final repo = ref.watch(comprasRepositoryProvider);
   return repo.getCompraConDetalle(compraId);
+});
+
+/// Saldo de rebate de cada proveedor activo.
+final saldosRebatesProvider =
+    FutureProvider<List<SaldoRebateProveedor>>((ref) {
+  final repo = ref.watch(comprasRepositoryProvider);
+  return repo.getSaldosRebates();
+});
+
+/// Suma de todos los saldos de rebate vivos, para la tarjeta de resumen.
+final saldoRebateTotalProvider = FutureProvider<num>((ref) async {
+  final saldos = await ref.watch(saldosRebatesProvider.future);
+  return saldos.fold<num>(0, (total, fila) => total + fila.saldo);
+});
+
+/// Movimientos del saldo de un proveedor. [proveedorId] vacío = todos.
+final movimientosRebateProvider =
+    FutureProvider.family<List<RebateProveedor>, String>((ref, proveedorId) {
+  final repo = ref.watch(comprasRepositoryProvider);
+  return repo.getMovimientosRebate(
+    proveedorId: proveedorId.isEmpty ? null : proveedorId,
+  );
 });

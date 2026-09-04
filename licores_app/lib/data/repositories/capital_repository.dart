@@ -46,6 +46,8 @@ class CapitalRepository {
         'dinero_disponible': 0,
         'cuentas_por_cobrar': 0,
         'deuda_proveedores': 0,
+        'saldo_rebates': 0,
+        'total_rebates_canjeado': 0,
       };
     }
     
@@ -63,6 +65,10 @@ class CapitalRepository {
       'dinero_disponible': parseNum(row['dinero_disponible']),
       'cuentas_por_cobrar': parseNum(row['cuentas_por_cobrar']),
       'deuda_proveedores': parseNum(row['deuda_proveedores']),
+      // Fuera del patrimonio a propósito: es saldo canjeable solo en
+      // mercancía, todavía no es plata ni inventario.
+      'saldo_rebates': parseNum(row['saldo_rebates']),
+      'total_rebates_canjeado': parseNum(row['total_rebates_canjeado']),
     };
   }
 }
