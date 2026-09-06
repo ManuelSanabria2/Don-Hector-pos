@@ -128,13 +128,9 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
     super.dispose();
   }
 
-  num _calcularTotalCompra(bool esLider) {
+  num _calcularTotalCompra() {
     final baseTotal = _lineas.fold<num>(0, (sum, l) => sum + l.subtotal);
-    if (esLider) {
-      final ajuste = CurrencyFormatter.parseCop(_ajusteCtrl.text);
-      return baseTotal + ajuste;
-    }
-    return baseTotal;
+    return baseTotal + CurrencyFormatter.parseCop(_ajusteCtrl.text);
   }
 
   Future<void> _showCrearProveedorDialog() async {
@@ -264,19 +260,12 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
-    final proveedoresList = ref.read(proveedoresProvider).value ?? [];
-    final selectedProv = proveedoresList.firstWhere(
-      (p) => p.id == _proveedorId,
-      orElse: () => Proveedor(id: '', nombre: ''),
-    );
-    final esLider = selectedProv.nombre.trim().toUpperCase() == 'LIDER';
-
     setState(() => _saving = true);
 
     try {
       final repo = ref.read(comprasRepositoryProvider);
 
-      final ajuste = esLider ? CurrencyFormatter.parseCop(_ajusteCtrl.text) : 0;
+      final ajuste = CurrencyFormatter.parseCop(_ajusteCtrl.text);
       final valorDeuda = _metodoPago == 'credito' ? CurrencyFormatter.parseCop(_deudaCtrl.text) : 0;
 
       final lineasDeDetalle = _lineas.map((l) {
@@ -363,13 +352,7 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
     final proveedoresAsync = ref.watch(proveedoresProvider);
     final colors = Theme.of(context).colorScheme;
 
-    final proveedoresList = proveedoresAsync.value ?? [];
-    final selectedProv = proveedoresList.firstWhere(
-      (p) => p.id == _proveedorId,
-      orElse: () => Proveedor(id: '', nombre: ''),
-    );
-    final esLider = selectedProv.nombre.trim().toUpperCase() == 'LIDER';
-    final totalCompra = _calcularTotalCompra(esLider);
+    final totalCompra = _calcularTotalCompra();
 
     if (_cargando) {
       return Scaffold(
@@ -456,17 +439,10 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                           ),
                                       ],
                                       onChanged: (val) {
-                                        setState(() {
-                                          _proveedorId = val;
-                                          final matchProv = list.firstWhere(
-                                            (p) => p.id == val,
-                                            orElse: () => Proveedor(id: '', nombre: ''),
-                                          );
-                                          final esLiderNew = matchProv.nombre.trim().toUpperCase() == 'LIDER';
-                                          if (!esLiderNew) {
-                                            _ajusteCtrl.text = '0';
-                                          }
-                                        });
+                                        // El ajuste no se borra al cambiar de
+                                        // proveedor: es de la factura, no del
+                                        // proveedor.
+                                        setState(() => _proveedorId = val);
                                       },
                                     ),
                                   ),
@@ -526,9 +502,8 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                 });
                               },
                             ),
-                            if (esLider) ...[
-                              const SizedBox(height: 12),
-                              TextFormField(
+                            const SizedBox(height: 12),
+                            TextFormField(
                                 controller: _ajusteCtrl,
                                 decoration: const InputDecoration(
                                   labelText: 'Ajustar factura',
@@ -551,7 +526,7 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                   // Un descuento puede ser mayor que cero en
                                   // valor absoluto, pero no puede dejar la
                                   // factura en negativo.
-                                  if (_calcularTotalCompra(true) < 0) {
+                                  if (_calcularTotalCompra() < 0) {
                                     return 'El descuento deja la factura en negativo';
                                   }
                                   return null;
@@ -560,7 +535,6 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                   setState(() {});
                                 },
                               ),
-                            ],
                             // En edición la deuda no se digita: el RPC la
                             // recalcula como el total nuevo menos lo ya
                             // pagado. Dejarla escribible permitiría que

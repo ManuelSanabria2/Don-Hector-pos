@@ -67,7 +67,10 @@ class CompraDetalleScreen extends ConsumerWidget {
           ),
         ),
         data: (compra) {
-          final isLider = compra.nombreProveedor?.trim().toUpperCase() == 'LIDER';
+          // El desglose solo aporta cuando hay un ajuste que explicar; si
+          // no, el total por si solo ya dice todo.
+          final tieneAjuste = compra.ajuste != 0;
+          final esDescuento = compra.ajuste < 0;
           final subtotalCalculado = compra.lineas.fold<num>(
             0,
             (sum, l) => sum + (l.cantidad * l.costoUnitario),
@@ -323,7 +326,7 @@ class CompraDetalleScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isLider) ...[
+                      if (tieneAjuste) ...[
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -348,17 +351,18 @@ class CompraDetalleScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Ajustar factura:',
-                              style: TextStyle(
+                            Text(
+                              esDescuento ? 'Descuento:' : 'Ajustar factura:',
+                              style: const TextStyle(
                                 color: AppColors.blancoD,
                                 fontSize: 14,
                               ),
                             ),
                             Text(
-                              '+ ${CurrencyFormatter.cop(compra.ajuste)}',
-                              style: const TextStyle(
-                                color: AppColors.ambar,
+                              '${esDescuento ? '− ' : '+ '}'
+                              '${CurrencyFormatter.cop(compra.ajuste.abs())}',
+                              style: TextStyle(
+                                color: esDescuento ? AppColors.verde : AppColors.ambar,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
                               ),
