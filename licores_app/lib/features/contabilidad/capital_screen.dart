@@ -228,8 +228,6 @@ class _CapitalScreenState extends ConsumerState<CapitalScreen> {
                     final dineroDisponible = resumen['dinero_disponible'] ?? 0;
                     final porCobrar = resumen['cuentas_por_cobrar'] ?? 0;
                     final deudaProveedores = resumen['deuda_proveedores'] ?? 0;
-                    final saldoRebates = resumen['saldo_rebates'] ?? 0;
-                    final rebatesCanjeados = resumen['total_rebates_canjeado'] ?? 0;
 
                     final isPositivo = patEst >= 0;
 
@@ -297,14 +295,6 @@ class _CapitalScreenState extends ConsumerState<CapitalScreen> {
                             style: TextStyle(color: Colors.white38, fontSize: 11, fontStyle: FontStyle.italic),
                           ),
                         ),
-                        // Cuenta de orden: va DEBAJO del patrimonio y fuera de
-                        // su suma. No es plata (no se puede retirar) ni
-                        // mercancía todavía, y puede caducar sin usarse; se
-                        // vuelve patrimonio el día que se canjea.
-                        if (saldoRebates > 0) ...[
-                          const SizedBox(height: 16),
-                          _RebateInformativo(saldo: saldoRebates),
-                        ],
                         const SizedBox(height: 24),
                         Align(
                           alignment: Alignment.centerLeft,
@@ -332,10 +322,6 @@ class _CapitalScreenState extends ConsumerState<CapitalScreen> {
                         _buildRowItem('Compras de Inventario Históricas', comprasHist, Colors.white70),
                         const SizedBox(height: 8),
                         _buildRowItem('Gastos Operativos Históricos', gastosHist, Colors.white70),
-                        if (rebatesCanjeados > 0) ...[
-                          const SizedBox(height: 8),
-                          _buildRowItem('Mercancía Recibida por Rebate', rebatesCanjeados, AppColors.verde),
-                        ],
                       ],
                     );
                   },
@@ -374,68 +360,6 @@ class _CapitalScreenState extends ConsumerState<CapitalScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// El saldo de rebate, como cuenta de orden.
-///
-/// Se pinta debajo del patrimonio y fuera de su suma a propósito: es plata
-/// que el proveedor reconoce pero que no se puede retirar ni gastar en otra
-/// cosa, así que todavía no es ni caja ni mercancía. Entra al patrimonio el
-/// día del canje, cuando el inventario sube sin que baje la caja.
-class _RebateInformativo extends StatelessWidget {
-  const _RebateInformativo({required this.saldo});
-
-  final num saldo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.ambar.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.ambar.withOpacity(0.35)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.card_giftcard, color: AppColors.ambar, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Saldo de rebate',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                    Text(
-                      formatCOP(saldo.toDouble()),
-                      style: const TextStyle(
-                        color: AppColors.ambar,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Fuera del patrimonio: solo se canjea en mercancía del '
-                  'proveedor, no se puede retirar. Cuenta como ganancia el día '
-                  'que lo canjees.',
-                  style: TextStyle(color: Colors.white38, fontSize: 11, fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

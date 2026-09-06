@@ -35,18 +35,25 @@ abstract final class CurrencyFormatter {
     return _copNumber.format(rounded).trim();
   }
 
+  /// Un menos al principio se conserva: los campos que aceptan
+  /// descuentos (ajustar factura) escriben montos negativos. En los
+  /// campos que no los aceptan nunca llega el signo, porque
+  /// [CopInputFormatter] solo lo deja pasar si se lo piden.
   static num parseCop(String value) {
     String clean = value.trim();
+    final esNegativo = clean.startsWith('-');
+    final signo = esNegativo ? -1 : 1;
+
     if (clean.contains(',')) {
       final parts = clean.split(',');
-      final intPart = parts[0].replaceAll('.', '');
-      final decPart = parts.length > 1 ? parts[1] : '';
-      final parsedDouble = double.tryParse('$intPart.$decPart') ?? 0;
-      return parsedDouble.round();
+      final intPart = parts[0].replaceAll(RegExp(r'[^0-9]'), '');
+      final decPart = parts.length > 1 ? parts[1].replaceAll(RegExp(r'[^0-9]'), '') : '';
+      final parsedDouble = double.tryParse('${intPart.isEmpty ? '0' : intPart}.${decPart.isEmpty ? '0' : decPart}') ?? 0;
+      return signo * parsedDouble.round();
     } else {
       final digits = clean.replaceAll(RegExp(r'[^0-9]'), '');
       final parsedNum = num.tryParse(digits) ?? 0;
-      return parsedNum.round();
+      return signo * parsedNum.round();
     }
   }
 }
@@ -57,7 +64,13 @@ String formatCOP(double monto) {
 
 class CopInputFormatter extends TextInputFormatter {
   final bool allowDecimals;
-  CopInputFormatter({this.allowDecimals = false});
+
+  /// Deja escribir un menos al principio. Solo lo activan los campos
+  /// donde un negativo significa algo, como el descuento de una
+  /// factura; en el resto el signo se sigue descartando.
+  final bool allowNegative;
+
+  CopInputFormatter({this.allowDecimals = false, this.allowNegative = false});
 
   @override
   TextEditingValue formatEditUpdate(
@@ -66,6 +79,34 @@ class CopInputFormatter extends TextInputFormatter {
   ) {
     if (newValue.text.isEmpty) {
       return const TextEditingValue();
+    }
+
+    if (allowNegative) {
+      // El menos se aparta antes de formatear y se vuelve a pegar al
+      // final: así el formateo de miles no tiene que saber del signo.
+      final negativo = newValue.text.contains('-');
+      final sinSigno = newValue.text.replaceAll('-', '');
+
+      if (sinSigno.isEmpty) {
+        // Solo el menos: es un estado válido mientras sigue escribiendo.
+        return negativo
+            ? const TextEditingValue(
+                text: '-',
+                selection: TextSelection.collapsed(offset: 1),
+              )
+            : const TextEditingValue();
+      }
+
+      final cuerpo = CopInputFormatter(allowDecimals: allowDecimals)
+          .formatEditUpdate(oldValue, newValue.copyWith(text: sinSigno));
+
+      if (!negativo) return cuerpo;
+
+      final texto = '-${cuerpo.text}';
+      return TextEditingValue(
+        text: texto,
+        selection: TextSelection.collapsed(offset: texto.length),
+      );
     }
 
     if (!allowDecimals) {

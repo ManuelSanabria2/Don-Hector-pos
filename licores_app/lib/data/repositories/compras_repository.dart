@@ -6,7 +6,6 @@ import '../models/proveedor.dart';
 import '../models/compra_inventario.dart';
 import '../models/detalle_compra.dart';
 import '../models/model_helpers.dart';
-import '../models/rebate_proveedor.dart';
 import 'supabase_providers.dart';
 
 final comprasRepositoryProvider = Provider<ComprasRepository>((ref) {
@@ -100,6 +99,49 @@ class ComprasRepository {
     return result as String;
   }
 
+  /// Corrige una factura ya registrada sin anularla ni volver a
+  /// digitarla: el RPC deshace las líneas viejas y aplica las nuevas
+  /// en una sola transacción, conservando el id de la compra (y por
+  /// tanto los pagos que ya cuelgan de ella).
+  ///
+  /// [ajuste] admite negativos: así se registra un descuento del
+  /// proveedor sobre el total de la factura.
+  ///
+  /// La deuda no se manda: el RPC la recalcula como el total nuevo
+  /// menos lo que ya se haya pagado, que es la única cuenta que no
+  /// se puede desincronizar.
+  ///
+  /// Devuelve el total recalculado de la factura.
+  Future<num> editarCompra({
+    required String compraId,
+    String? proveedorId,
+    required DateTime fecha,
+    required String metodoPago,
+    String? notas,
+    required List<DetalleCompra> lineas,
+    num ajuste = 0,
+  }) async {
+    final total = await _client.rpc(
+      'editar_compra',
+      params: {
+        'p_compra_id': compraId,
+        'p_proveedor_id': proveedorId,
+        'p_fecha': dateOnly(fecha),
+        'p_metodo_pago': metodoPago,
+        'p_notas': notas,
+        'p_items': lineas
+            .map((l) => {
+                  'producto_id': l.productoId,
+                  'cantidad': l.cantidad,
+                  'costo_unitario': l.costoUnitario,
+                })
+            .toList(),
+        'p_ajuste': ajuste,
+      },
+    );
+    return parseNum(total);
+  }
+
   Future<void> anularCompra(String compraId, {String? motivo}) async {
     await _client.rpc(
       'anular_compra',
@@ -138,105 +180,6 @@ class ComprasRepository {
       'metodo_pago': metodoPago,
       'notas': notas ?? 'Pago registrado el $timestamp',
     });
-  }
-
-  // ==========================================================
-  // REBATES DE PROVEEDOR
-  //
-  // El saldo a favor no se guarda en un campo: se deriva de los
-  // movimientos, igual que los cobros de mayoristas. El canje NO se
-  // registra por aquí — lo inserta registrar_compra cuando la compra
-  // va con metodo_pago 'rebate', para que descontar el saldo y meter
-  // la mercancía sean la misma transacción.
-  // ==========================================================
-
-  /// Saldo de rebate de cada proveedor activo, con el detalle de cómo
-  /// se compone.
-  Future<List<SaldoRebateProveedor>> getSaldosRebates() async {
-    final rows = await _client
-        .from('saldos_rebates_proveedor')
-        .select()
-        .order('saldo', ascending: false);
-    return rows.map(SaldoRebateProveedor.fromJson).toList();
-  }
-
-  /// Saldo disponible de un solo proveedor, para validar un canje
-  /// antes de intentarlo.
-  Future<num> getSaldoRebate(String proveedorId) async {
-    final saldo = await _client.rpc(
-      'saldo_rebate_proveedor',
-      params: {'p_proveedor_id': proveedorId},
-    );
-    return parseNum(saldo);
-  }
-
-  /// Movimientos del saldo, del más reciente al más viejo. Sin
-  /// [proveedorId] trae los de todos los proveedores.
-  Future<List<RebateProveedor>> getMovimientosRebate({
-    String? proveedorId,
-    bool incluirAnulados = false,
-  }) async {
-    var query =
-        _client.from('rebates_proveedor').select('*, proveedores(nombre)');
-
-    if (proveedorId != null) {
-      query = query.eq('proveedor_id', proveedorId);
-    }
-
-    if (!incluirAnulados) {
-      query = query.eq('anulado', false);
-    }
-
-    final rows = await query
-        .order('fecha', ascending: false)
-        .order('created_at', ascending: false);
-    return rows.map(RebateProveedor.fromJson).toList();
-  }
-
-  /// Registra que el proveedor reconoció una bonificación (o una
-  /// corrección, o que la caducó). El canje va por registrarCompra.
-  Future<void> registrarMovimientoRebate({
-    required String proveedorId,
-    required num monto,
-    required String tipo,
-    DateTime? fecha,
-    String? notas,
-  }) async {
-    await _client.from('rebates_proveedor').insert({
-      'proveedor_id': proveedorId,
-      'monto': monto,
-      'tipo': tipo,
-      'fecha': dateOnly(fecha ?? DateTime.now()),
-      'notas': notas,
-    });
-  }
-
-  /// Corrige una compra que se registró como pagada con plata cuando en
-  /// realidad se canjeó con el saldo de rebate del proveedor.
-  ///
-  /// Es la salida para cuando anular y volver a registrar no se puede
-  /// porque la mercancía ya se vendió y el stock no alcanza para
-  /// revertirla. Solo cambia el origen de fondos: no toca stock,
-  /// costos ni el detalle de la compra.
-  ///
-  /// Devuelve el saldo de rebate que le queda al proveedor.
-  Future<num> convertirCompraARebate(String compraId, {String? notas}) async {
-    final saldo = await _client.rpc(
-      'convertir_compra_a_rebate',
-      params: {
-        'p_compra_id': compraId,
-        'p_notas': notas,
-      },
-    );
-    return parseNum(saldo);
-  }
-
-  /// Anulación lógica, como el resto del proyecto: el movimiento se
-  /// marca y el saldo se recalcula sin él.
-  Future<void> anularMovimientoRebate(String id) async {
-    await _client
-        .from('rebates_proveedor')
-        .update({'anulado': true}).eq('id', id);
   }
 
   Future<num> getTotalPagosComprasRango(

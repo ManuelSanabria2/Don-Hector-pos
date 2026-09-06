@@ -9,15 +9,23 @@ import '../../core/utils/currency_formatter.dart';
 import '../../data/models/proveedor.dart';
 import '../../data/models/producto.dart';
 import '../../data/models/detalle_compra.dart';
-import '../../data/models/rebate_proveedor.dart';
 import '../../data/repositories/compras_repository.dart';
 import '../../data/repositories/inventario_repository.dart';
 import '../inventario/inventario_providers.dart';
 import '../contabilidad/contabilidad_providers.dart';
 import 'compras_providers.dart';
 
+/// Registra una compra nueva, o edita una ya registrada si se le pasa
+/// [compraId].
+///
+/// Es la misma pantalla en los dos modos a propósito: lo que se corrige
+/// son los mismos campos que se digitaron, así que separarlas obligaría
+/// a mantener dos formularios en paralelo.
 class CompraFormScreen extends ConsumerStatefulWidget {
-  const CompraFormScreen({super.key});
+  const CompraFormScreen({super.key, this.compraId});
+
+  /// null = compra nueva.
+  final String? compraId;
 
   @override
   ConsumerState<CompraFormScreen> createState() => _CompraFormScreenState();
@@ -25,7 +33,7 @@ class CompraFormScreen extends ConsumerStatefulWidget {
 
 class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   String? _proveedorId;
   DateTime _fecha = DateTime.now();
   String _metodoPago = 'efectivo';
@@ -34,9 +42,15 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
   late final TextEditingController _notasCtrl;
   late final TextEditingController _ajusteCtrl;
   late final TextEditingController _deudaCtrl;
-  
+
   final List<_FormLinea> _lineas = [];
   bool _saving = false;
+
+  /// Solo en edición: mientras se traen la factura y sus líneas.
+  bool _cargando = false;
+  String? _errorCarga;
+
+  bool get _esEdicion => widget.compraId != null;
 
   @override
   void initState() {
@@ -44,6 +58,62 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
     _notasCtrl = TextEditingController();
     _ajusteCtrl = TextEditingController(text: '0');
     _deudaCtrl = TextEditingController(text: '0');
+
+    if (_esEdicion) {
+      _cargando = true;
+      _cargarCompra();
+    }
+  }
+
+  /// Trae la factura y deja el formulario tal como quedó registrada.
+  Future<void> _cargarCompra() async {
+    try {
+      final compra = await ref
+          .read(comprasRepositoryProvider)
+          .getCompraConDetalle(widget.compraId!);
+
+      if (!mounted) return;
+
+      setState(() {
+        _proveedorId = compra.proveedorId;
+        _fecha = compra.fecha;
+        _metodoPago = compra.metodoPago;
+        _notasCtrl.text = compra.notas ?? '';
+        _ajusteCtrl.text = CurrencyFormatter.copNumberOnly(
+          compra.ajuste,
+          allowDecimals: true,
+        );
+        _deudaCtrl.text = CurrencyFormatter.copNumberOnly(
+          compra.valorDeuda,
+          allowDecimals: true,
+        );
+
+        _lineas
+          ..clear()
+          ..addAll(compra.lineas.map(
+            (l) => _FormLinea(
+              productoId: l.productoId,
+              nombreProducto: l.nombreProducto ?? 'Producto',
+              cantidadCtrl: TextEditingController(text: l.cantidad.toString()),
+              costoUnitarioCtrl: TextEditingController(
+                text: CurrencyFormatter.copNumberOnly(
+                  l.costoUnitario,
+                  allowDecimals: true,
+                ),
+              ),
+              onChanged: () => setState(() {}),
+            ),
+          ));
+
+        _cargando = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorCarga = e.toString();
+        _cargando = false;
+      });
+    }
   }
 
   @override
@@ -65,16 +135,6 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
       return baseTotal + ajuste;
     }
     return baseTotal;
-  }
-
-  /// Saldo de rebate del proveedor elegido. Sin proveedor no hay saldo:
-  /// el rebate siempre lo otorga alguien.
-  num _saldoRebateDe(List<SaldoRebateProveedor> saldos) {
-    if (_proveedorId == null) return 0;
-    for (final saldo in saldos) {
-      if (saldo.proveedorId == _proveedorId) return saldo.saldo;
-    }
-    return 0;
   }
 
   Future<void> _showCrearProveedorDialog() async {
@@ -211,34 +271,6 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
     );
     final esLider = selectedProv.nombre.trim().toUpperCase() == 'LIDER';
 
-    // Un canje de rebate lo valida el trigger en Postgres, pero avisar
-    // antes evita perder la compra ya digitada por un saldo corto.
-    if (_metodoPago == 'rebate') {
-      if (_proveedorId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Un canje de rebate necesita indicar el proveedor'),
-          ),
-        );
-        return;
-      }
-
-      final saldos = ref.read(saldosRebatesProvider).value ?? const [];
-      final saldo = _saldoRebateDe(saldos);
-      final total = _calcularTotalCompra(esLider);
-      if (total > saldo) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'El saldo de rebate es ${formatCOP(saldo.toDouble())} '
-              'y la compra vale ${formatCOP(total.toDouble())}',
-            ),
-          ),
-        );
-        return;
-      }
-    }
-
     setState(() => _saving = true);
 
     try {
@@ -258,17 +290,36 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
         );
       }).toList();
 
-      await repo.registrarCompra(
-        proveedorId: _proveedorId,
-        fecha: _fecha,
-        metodoPago: _metodoPago,
-        notas: _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim(),
-        lineas: lineasDeDetalle,
-        ajuste: ajuste,
-        valorDeuda: valorDeuda,
-        metodoPagoContado: _metodoPagoContado,
-      );
+      final notas = _notasCtrl.text.trim().isEmpty ? null : _notasCtrl.text.trim();
 
+      if (_esEdicion) {
+        // La deuda no se manda: el RPC la recalcula como el total nuevo
+        // menos lo que ya se haya pagado de esta factura.
+        await repo.editarCompra(
+          compraId: widget.compraId!,
+          proveedorId: _proveedorId,
+          fecha: _fecha,
+          metodoPago: _metodoPago,
+          notas: notas,
+          lineas: lineasDeDetalle,
+          ajuste: ajuste,
+        );
+      } else {
+        await repo.registrarCompra(
+          proveedorId: _proveedorId,
+          fecha: _fecha,
+          metodoPago: _metodoPago,
+          notas: notas,
+          lineas: lineasDeDetalle,
+          ajuste: ajuste,
+          valorDeuda: valorDeuda,
+          metodoPagoContado: _metodoPagoContado,
+        );
+      }
+
+      if (_esEdicion) {
+        ref.invalidate(compraDetalleProvider(widget.compraId!));
+      }
       ref.invalidate(comprasDelMesProvider);
       ref.invalidate(totalComprasRangoProvider);
       ref.invalidate(inventarioProductosProvider);
@@ -277,21 +328,29 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
       ref.invalidate(resumenHoyProvider);
       ref.invalidate(metricasMesProvider);
       ref.invalidate(resumenPatrimonioProvider);
-      if (_metodoPago == 'rebate') {
-        ref.invalidate(saldosRebatesProvider);
-        ref.invalidate(movimientosRebateProvider);
-      }
 
       if (mounted) {
         context.pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Compra registrada exitosamente')),
+          SnackBar(
+            content: Text(
+              _esEdicion
+                  ? 'Factura actualizada exitosamente'
+                  : 'Compra registrada exitosamente',
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al registrar compra: $e')),
+          SnackBar(
+            content: Text(
+              _esEdicion
+                  ? 'Error al editar la factura: $e'
+                  : 'Error al registrar compra: $e',
+            ),
+          ),
         );
       }
     } finally {
@@ -311,13 +370,40 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
     );
     final esLider = selectedProv.nombre.trim().toUpperCase() == 'LIDER';
     final totalCompra = _calcularTotalCompra(esLider);
-    final saldosRebate =
-        ref.watch(saldosRebatesProvider).value ?? const <SaldoRebateProveedor>[];
-    final saldoRebate = _saldoRebateDe(saldosRebate);
+
+    if (_cargando) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Editar Factura')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorCarga != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Editar Factura')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: AppColors.rojo, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'No se pudo cargar la factura:\n$_errorCarga',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.blancoD, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Registrar Compra'),
+        title: Text(_esEdicion ? 'Editar Factura' : 'Registrar Compra'),
       ),
       body: Form(
         key: _formKey,
@@ -380,13 +466,6 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                           if (!esLiderNew) {
                                             _ajusteCtrl.text = '0';
                                           }
-                                          // El saldo de rebate es del
-                                          // proveedor anterior: al cambiarlo,
-                                          // el canje deja de tener respaldo.
-                                          if (_metodoPago == 'rebate' &&
-                                              _saldoRebateDe(saldosRebate) <= 0) {
-                                            _metodoPago = 'efectivo';
-                                          }
                                         });
                                       },
                                     ),
@@ -428,30 +507,13 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                             DropdownButtonFormField<String>(
                               value: _metodoPago,
                               decoration: const InputDecoration(labelText: 'Método de pago'),
-                              items: [
-                                const DropdownMenuItem(value: 'efectivo', child: Text('Efectivo')),
-                                const DropdownMenuItem(value: 'nequi', child: Text('Nequi')),
-                                const DropdownMenuItem(value: 'daviplata', child: Text('Daviplata')),
-                                const DropdownMenuItem(value: 'transferencia', child: Text('Transferencia')),
-                                const DropdownMenuItem(value: 'credito', child: Text('Crédito')),
-                                // El rebate es un saldo a favor de un
-                                // proveedor concreto: sin proveedor elegido
-                                // no hay de dónde descontarlo.
-                                DropdownMenuItem(
-                                  value: 'rebate',
-                                  enabled: saldoRebate > 0,
-                                  child: Text(
-                                    saldoRebate > 0
-                                        ? 'Rebate (saldo ${formatCOP(saldoRebate.toDouble())})'
-                                        : 'Rebate (sin saldo)',
-                                    style: TextStyle(
-                                      color: saldoRebate > 0
-                                          ? null
-                                          : AppColors.gris,
-                                    ),
-                                  ),
-                                ),
-                                const DropdownMenuItem(value: 'otro', child: Text('Otro')),
+                              items: const [
+                                DropdownMenuItem(value: 'efectivo', child: Text('Efectivo')),
+                                DropdownMenuItem(value: 'nequi', child: Text('Nequi')),
+                                DropdownMenuItem(value: 'daviplata', child: Text('Daviplata')),
+                                DropdownMenuItem(value: 'transferencia', child: Text('Transferencia')),
+                                DropdownMenuItem(value: 'credito', child: Text('Crédito')),
+                                DropdownMenuItem(value: 'otro', child: Text('Otro')),
                               ],
                               onChanged: (val) {
                                 setState(() {
@@ -464,13 +526,6 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                 });
                               },
                             ),
-                            if (_metodoPago == 'rebate') ...[
-                              const SizedBox(height: 12),
-                              _AvisoRebate(
-                                saldo: saldoRebate,
-                                total: totalCompra,
-                              ),
-                            ],
                             if (esLider) ...[
                               const SizedBox(height: 12),
                               TextFormField(
@@ -478,13 +533,27 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                 decoration: const InputDecoration(
                                   labelText: 'Ajustar factura',
                                   prefixText: '\$ ',
+                                  helperText:
+                                      'Negativo para descontar (rebate, devolución)',
                                 ),
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                inputFormatters: [CopInputFormatter(allowDecimals: true)],
+                                keyboardType: const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                  signed: true,
+                                ),
+                                inputFormatters: [
+                                  CopInputFormatter(
+                                    allowDecimals: true,
+                                    allowNegative: true,
+                                  ),
+                                ],
                                 validator: (v) {
                                   if (v == null || v.isEmpty) return null;
-                                  final val = CurrencyFormatter.parseCop(v);
-                                  if (val < 0) return 'Monto >= 0';
+                                  // Un descuento puede ser mayor que cero en
+                                  // valor absoluto, pero no puede dejar la
+                                  // factura en negativo.
+                                  if (_calcularTotalCompra(true) < 0) {
+                                    return 'El descuento deja la factura en negativo';
+                                  }
                                   return null;
                                 },
                                 onChanged: (val) {
@@ -492,7 +561,41 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                 },
                               ),
                             ],
-                            if (_metodoPago == 'credito') ...[
+                            // En edición la deuda no se digita: el RPC la
+                            // recalcula como el total nuevo menos lo ya
+                            // pagado. Dejarla escribible permitiría que
+                            // deuda y pagos dejaran de cuadrar.
+                            if (_metodoPago == 'credito' && _esEdicion) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.superficie2,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.info_outline,
+                                        size: 18, color: AppColors.ambar),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'La deuda se recalcula sola: total nuevo '
+                                        'menos lo que ya se haya pagado de esta '
+                                        'factura. Los pagos registrados no se tocan.',
+                                        style: TextStyle(
+                                          color: AppColors.blancoD,
+                                          fontSize: 12,
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            if (_metodoPago == 'credito' && !_esEdicion) ...[
                               const SizedBox(height: 12),
                               TextFormField(
                                 controller: _deudaCtrl,
@@ -730,7 +833,9 @@ class _CompraFormScreenState extends ConsumerState<CompraFormScreen> {
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.check),
-                        label: const Text('Registrar Compra'),
+                        label: Text(
+                          _esEdicion ? 'Guardar Cambios' : 'Registrar Compra',
+                        ),
                       ),
                     ),
                   ],
@@ -897,68 +1002,6 @@ class _ProductSearchBottomSheetState extends ConsumerState<_ProductSearchBottomS
                           ),
           ),
           const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-}
-
-/// Recordatorio de qué significa pagar con rebate, y si el saldo alcanza.
-///
-/// Los costos se digitan como siempre (los reales de lista): el canje
-/// cambia de dónde sale la plata, no cuánto vale la mercancía. Meterla a
-/// costo cero diluiría el costo promedio del producto.
-class _AvisoRebate extends StatelessWidget {
-  const _AvisoRebate({required this.saldo, required this.total});
-
-  final num saldo;
-  final num total;
-
-  @override
-  Widget build(BuildContext context) {
-    final alcanza = total > 0 && total <= saldo;
-    final color = alcanza ? AppColors.verde : AppColors.rojo;
-    final restante = saldo - total;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.4)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            alcanza ? Icons.card_giftcard : Icons.warning_amber_rounded,
-            color: color,
-            size: 20,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  alcanza
-                      ? 'Se descontarán ${formatCOP(total.toDouble())} del saldo. '
-                          'Quedan ${formatCOP(restante.toDouble())}.'
-                      : total <= 0
-                          ? 'Agrega productos para canjear el rebate.'
-                          : 'El saldo (${formatCOP(saldo.toDouble())}) no alcanza '
-                              'para ${formatCOP(total.toDouble())}.',
-                  style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Digita los costos reales de lista: el canje cambia de dónde '
-                  'sale la plata, no cuánto vale la mercancía. No sale nada de caja.',
-                  style: TextStyle(color: AppColors.blancoD, fontSize: 12, height: 1.3),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
